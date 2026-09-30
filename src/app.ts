@@ -6,4 +6,6 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Hello World!');
 });
 
+console.log("online");
+
 app.listen(3000);
