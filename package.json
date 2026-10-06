@@ -15,8 +15,9 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node ./src/app.ts"
+    "start": "node --env-file-if-exists=.env ./src/app.ts",
+    "dev": "node --watch --env-file-if-exists=.env ./src/app.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",

@@ -4,7 +4,7 @@ Korte beschrijving van de applicatie.
 
 ## Vereisten
 
-- [Node.js](https://nodejs.org/) 18 of hoger (LTS aanbevolen)
+- [Node.js](https://nodejs.org/) 24 of hoger (nodig voor de ingebouwde SQLite en TypeScript-ondersteuning)
 - npm (komt mee met Node.js)
 
 Controleer met:
@@ -41,6 +41,16 @@ macOS / Linux:
 ```bash
 cp .env.example .env
 ```
+
+## Database (SQLite)
+
+De back-end gebruikt SQLite via de in Node ingebouwde module `node:sqlite`. Je hoeft niets apart te installeren of te starten; `npm start` en `npm run dev` openen de database automatisch.
+
+- De database is één bestand: `./data/app.db` (aan te passen met `DATABASE_FILE` in `.env`). Het wordt niet mee gecommit.
+- Database leegmaken: stop de app en verwijder de map `data`.
+- Queries uitvoeren vanuit de code: `import { db } from './db.ts'` en dan `db.prepare('SELECT ...').all()`.
+
+Controleer de verbinding via [http://localhost:3000/health/db](http://localhost:3000/health/db).
 
 ## Starten
 
