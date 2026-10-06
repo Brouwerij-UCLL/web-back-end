@@ -1,8 +1,11 @@
 import express, { type Express, type Request, type Response } from 'express';
 import { checkDatabaseConnection } from './db.ts';
+import migrate from './migrate.ts';
 
 const app: Express = express();
 const port = Number(process.env.PORT ?? 3000);
+
+migrate();
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Hello World!');
