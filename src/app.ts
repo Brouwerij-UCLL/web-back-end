@@ -3,6 +3,8 @@ import migrate from './migrate.ts';
 
 const app: Express = express();
 
+migrate();
+
 app.get('/', (req: Request, res: Response) => {
   res.send('Hello World!');
 });
