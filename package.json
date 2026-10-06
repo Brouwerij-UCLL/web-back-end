@@ -19,7 +19,8 @@
     "start": "node ./src/app.ts"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "mqtt": "^5.16.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
