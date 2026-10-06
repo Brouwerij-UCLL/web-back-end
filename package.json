@@ -19,7 +19,9 @@
     "start": "node ./src/app.ts"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "better-sqlite3": "^12.4.1",
+    "express": "^5.2.1",
+    "knex": "^3.1.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
