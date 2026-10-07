@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'fs';
 import { db } from './db.ts';
 
 const migrationsDir = new URL('../migrations/', import.meta.url);
