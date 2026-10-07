@@ -70,11 +70,8 @@ De applicatie draait op [http://localhost:3000](http://localhost:3000), tenzij j
 
 ## Database-migraties
 
-De applicatie gebruikt SQLite. Bij het opstarten voert Knex automatisch alle
-nog niet uitgevoerde migraties uit de map `migrations/` uit. Het
-databasebestand (`database.sqlite`) wordt in de projectmap aangemaakt en niet
-in Git bijgehouden.
+Het databaseschema staat in genummerde SQL-bestanden in de map `migrations/`, bijvoorbeeld `001_brouwerij_schema.sql`. Bij het opstarten voert de app alle bestanden uit die nog niet uitgevoerd zijn, in alfabetische volgorde, en houdt dat bij in de tabel `migrations`. De migraties draaien op dezelfde database als de rest van de app (`DATABASE_FILE`).
 
-Plaats migratiebestanden met de extensie `.js` in `migrations/`; nieuwe
-migraties worden bij de volgende start van de applicatie toegepast. De map is
-nu nog leeg, dus er worden nog geen tabellen aangemaakt.
+- Schema wijzigen: voeg een nieuw `.sql`-bestand toe met het volgende nummer.
+- Pas een migratie die al gedeeld is nooit meer aan; maak een nieuwe.
+- Mislukt een migratie, dan wordt ze teruggedraaid en start de app niet.
