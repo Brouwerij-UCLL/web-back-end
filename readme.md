@@ -53,17 +53,21 @@ src/
   api/              REST-endpoints
     index.ts        router voor /api; koppel hier een router per onderdeel
     health.ts       /health/db
+    recepten/       één map per onderdeel
+      routes.ts     de endpoints van /api/recepten
   database/         alles rond SQLite
     db.ts           de databaseverbinding
     migrate.ts      voert de migraties uit
+    recepten/       één map per onderdeel, zoals in api/
+      queries.ts    de queries op de recepten-tabellen
   mqtt/             verbinding met de MQTT-broker
     client.ts       verbinden en abonneren
     topics.ts       de topics en het ontleden ervan
     handlers.ts     verwerken van binnenkomende berichten
 ```
 
-- Nieuw endpoint: maak een router in `src/api/` (bv. `recepten.ts`) en koppel die in `src/api/index.ts`.
-- Queries: zet ze per onderdeel in `src/database/` (bv. `recepten.ts`), zodat routes en MQTT-handlers dezelfde functies gebruiken.
+- Nieuw onderdeel: maak een map in `src/api/` met een `routes.ts` (zoals `recepten/`) en koppel de router in `src/api/index.ts`.
+- Queries: zet ze in `src/database/` in een map met dezelfde naam als in `src/api/` (zoals `recepten/queries.ts`), zodat routes en MQTT-handlers dezelfde functies gebruiken.
 - Nieuw MQTT-topic: voeg het toe in `src/mqtt/topics.ts` en verwerk het in `src/mqtt/handlers.ts`.
 
 ## Database (SQLite)
