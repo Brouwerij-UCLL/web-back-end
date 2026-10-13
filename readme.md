@@ -47,8 +47,8 @@ cp .env.example .env
 ```
 migrations/         SQL-migraties (001_..., 002_...)
 src/
-  server.ts         startpunt: migraties, MQTT en webserver starten
-  app.ts            de Express-app: middleware en routers koppelen
+  server.ts         lokaal startpunt: MQTT en webserver starten
+  app.ts            de Express-app: migraties, middleware en routers (startpunt op Vercel)
   config.ts         instellingen uit .env (PORT, DATABASE_FILE, MQTT_URL)
   api/              REST-endpoints
     index.ts        router voor /api; koppel hier een router per onderdeel
