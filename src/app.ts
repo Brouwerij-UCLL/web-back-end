@@ -1,4 +1,5 @@
 import express, { type Express, type Request, type Response } from 'express';
+import './mqtt.ts';
 import { checkDatabaseConnection } from './db.ts';
 import migrate from './migrate.ts';
 
@@ -8,7 +9,7 @@ const port = Number(process.env.PORT ?? 3000);
 migrate();
 
 app.get('/', (req: Request, res: Response) => {
-  res.send('Hello World!');
+  res.send('Hello, Ferrari');
 });
 
 app.get('/health/db', (req: Request, res: Response) => {
