@@ -1,32 +1,14 @@
 import express, { type Express, type Request, type Response } from 'express';
-import './mqtt.ts';
-import { checkDatabaseConnection } from './db.ts';
-import migrate from './migrate.ts';
+import { apiRouter } from './api/index.ts';
+import { healthRouter } from './api/health.ts';
 
-const app: Express = express();
-const port = Number(process.env.PORT ?? 3000);
+export const app: Express = express();
 
-migrate();
+app.use(express.json());
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Hello, Ferrari');
 });
 
-app.get('/health/db', (req: Request, res: Response) => {
-  try {
-    checkDatabaseConnection();
-    res.json({ database: 'ok' });
-  } catch (error) {
-    res.status(503).json({ database: 'unreachable', error: (error as Error).message });
-  }
-});
-
-app.listen(port, () => {
-  console.log(`online op http://localhost:${port}`);
-  try {
-    checkDatabaseConnection();
-    console.log('verbonden met database');
-  } catch (error) {
-    console.error('geen verbinding met database:', (error as Error).message);
-  }
-});
+app.use('/health', healthRouter);
+app.use('/api', apiRouter);

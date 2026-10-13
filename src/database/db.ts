@@ -1,9 +1,10 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { config } from '../config.ts';
 
 // SQLite (ingebouwd in Node): de volledige database is één lokaal bestand.
-const file = process.env.DATABASE_FILE ?? './data/app.db';
+const file = config.databaseFile;
 mkdirSync(dirname(file), { recursive: true });
 
 export const db = new DatabaseSync(file);

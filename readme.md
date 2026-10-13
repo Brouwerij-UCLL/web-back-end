@@ -42,13 +42,37 @@ macOS / Linux:
 cp .env.example .env
 ```
 
+## Mappenstructuur
+
+```
+migrations/         SQL-migraties (001_..., 002_...)
+src/
+  server.ts         startpunt: migraties, MQTT en webserver starten
+  app.ts            de Express-app: middleware en routers koppelen
+  config.ts         instellingen uit .env (PORT, DATABASE_FILE, MQTT_URL)
+  api/              REST-endpoints
+    index.ts        router voor /api; koppel hier een router per onderdeel
+    health.ts       /health/db
+  database/         alles rond SQLite
+    db.ts           de databaseverbinding
+    migrate.ts      voert de migraties uit
+  mqtt/             verbinding met de MQTT-broker
+    client.ts       verbinden en abonneren
+    topics.ts       de topics en het ontleden ervan
+    handlers.ts     verwerken van binnenkomende berichten
+```
+
+- Nieuw endpoint: maak een router in `src/api/` (bv. `recepten.ts`) en koppel die in `src/api/index.ts`.
+- Queries: zet ze per onderdeel in `src/database/` (bv. `recepten.ts`), zodat routes en MQTT-handlers dezelfde functies gebruiken.
+- Nieuw MQTT-topic: voeg het toe in `src/mqtt/topics.ts` en verwerk het in `src/mqtt/handlers.ts`.
+
 ## Database (SQLite)
 
 De back-end gebruikt SQLite via de in Node ingebouwde module `node:sqlite`. Je hoeft niets apart te installeren of te starten; `npm start` en `npm run dev` openen de database automatisch.
 
 - De database is één bestand: `./data/app.db` (aan te passen met `DATABASE_FILE` in `.env`). Het wordt niet mee gecommit.
 - Database leegmaken: stop de app en verwijder de map `data`.
-- Queries uitvoeren vanuit de code: `import { db } from './db.ts'` en dan `db.prepare('SELECT ...').all()`.
+- Queries uitvoeren vanuit de code: `import { db } from '../database/db.ts'` en dan `db.prepare('SELECT ...').all()`.
 
 Controleer de verbinding via [http://localhost:3000/health/db](http://localhost:3000/health/db).
 
