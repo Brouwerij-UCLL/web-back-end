@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'fs';
 import { db } from './db.ts';
 
-const migrationsDir = new URL('../migrations/', import.meta.url);
+const migrationsDir = new URL('../../migrations/', import.meta.url);
 
 // Voert alle nog niet uitgevoerde .sql-bestanden uit de map migrations uit, in alfabetische volgorde.
 export default function migrate(): void {

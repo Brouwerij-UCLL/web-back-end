@@ -15,8 +15,8 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "node --env-file-if-exists=.env ./src/app.ts",
-    "dev": "node --watch --env-file-if-exists=.env ./src/app.ts",
+    "start": "node --env-file-if-exists=.env ./src/server.ts",
+    "dev": "node --watch --env-file-if-exists=.env ./src/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
