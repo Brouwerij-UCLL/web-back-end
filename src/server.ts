@@ -1,11 +1,9 @@
 import { app } from './app.ts';
 import { config } from './config.ts';
 import { checkDatabaseConnection } from './database/db.ts';
-import migrate from './database/migrate.ts';
 import { startMqtt } from './mqtt/client.ts';
 
-// Startpunt van de back-end: database migreren, MQTT verbinden en de webserver starten.
-migrate();
+// Lokaal startpunt van de back-end: MQTT verbinden en de webserver starten.
 startMqtt();
 
 app.listen(config.port, () => {
