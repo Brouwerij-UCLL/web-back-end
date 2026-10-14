@@ -51,10 +51,13 @@ src/
   app.ts            de Express-app: migraties, middleware en routers (startpunt op Vercel)
   config.ts         instellingen uit .env (PORT, DATABASE_FILE, MQTT_URL)
   api/              REST-endpoints
-    index.ts        router voor /api; koppel hier een router per onderdeel
+    index.ts        lijst van alle groepen endpoints
+    docs.ts         Swagger UI op /api/docs
     health.ts       /health/db
+    openapi/        validatie en documentatie van endpoints (createRoutes)
     recepten/       één map per onderdeel
       routes.ts     de endpoints van /api/recepten
+      schemas.ts    schema's van invoer en antwoorden, met voorbeelden
   database/         alles rond SQLite
     db.ts           de databaseverbinding
     migrate.ts      voert de migraties uit
@@ -66,9 +69,41 @@ src/
     handlers.ts     verwerken van binnenkomende berichten
 ```
 
-- Nieuw onderdeel: maak een map in `src/api/` met een `routes.ts` (zoals `recepten/`) en koppel de router in `src/api/index.ts`.
+- Nieuw onderdeel: maak een map in `src/api/` met een `routes.ts` en `schemas.ts` (zoals `recepten/`), maak de groep met `createRoutes` en voeg ze toe aan `src/api/index.ts`.
 - Queries: zet ze in `src/database/` in een map met dezelfde naam als in `src/api/` (zoals `recepten/queries.ts`), zodat routes en MQTT-handlers dezelfde functies gebruiken.
 - Nieuw MQTT-topic: voeg het toe in `src/mqtt/topics.ts` en verwerk het in `src/mqtt/handlers.ts`.
+
+## API-documentatie
+
+De documentatie wordt automatisch gegenereerd uit de code:
+
+- Swagger UI: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
+- OpenAPI 3-specificatie: [http://localhost:3000/api/docs/openapi.json](http://localhost:3000/api/docs/openapi.json)
+
+Elk endpoint wordt gedefinieerd met `route(...)` van een groep uit `createRoutes`. Die ene definitie bepaalt zowel de documentatie als het gedrag:
+
+```ts
+recepten.route({
+  method: 'get',
+  path: '/:id',
+  summary: 'Eén recept',
+  params: ReceptIdParams,      // wordt gevalideerd; ongeldig geeft 400
+  response: Recept,            // het antwoord wordt hiertegen gecontroleerd
+  responseDescription: 'Het recept',
+  errors: { 404: 'Er bestaat geen recept met dit id' },
+  // auth: true,               // vereist een JWT-token (Authorization: Bearer ...)
+  handler: ({ params }) => {
+    const recept = getRecept(params.id);
+    if (!recept) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    return recept;
+  },
+});
+```
+
+- **Schema's** staan per onderdeel in `schemas.ts` en worden gemaakt met [Zod](https://zod.dev). Geef elk schema van invoer en antwoord een voorbeeld met `.meta({ example: ... })`.
+- **Fouten** gooi je met `throw new HttpFout(status, 'boodschap')`. Elk foutantwoord heeft het formaat `{"fout": "..."}`.
+- **Klopt altijd:** wijkt het antwoord van een handler af van het schema, dan geeft de back-end een 500 in plaats van ongedocumenteerde data.
+- **Controle:** `npm test` controleert dat elk endpoint een beschrijving, groep, voorbeelden en het gedeelde foutschema heeft, en roept elk GET-endpoint aan met de voorbeeldwaarden.
 
 ## Database (SQLite)
 
