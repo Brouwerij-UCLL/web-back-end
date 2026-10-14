@@ -1,6 +1,7 @@
-import express, { type Express, type Request, type Response } from 'express';
-import { apiRouter } from './api/index.ts';
-import { healthRouter } from './api/health.ts';
+import express, { type Express, type NextFunction, type Request, type Response } from 'express';
+import { docsRouter } from './api/docs.ts';
+import { routeGroepen } from './api/index.ts';
+import { HttpFout } from './api/openapi/route.ts';
 import cors, {type CorsOptions } from 'cors';
 import migrate from './database/migrate.ts';
 
@@ -34,8 +35,30 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Hello, Ferrari');
 });
 
-app.use('/health', healthRouter);
-app.use('/api', apiRouter);
+app.use('/api/docs', docsRouter);
+for (const groep of routeGroepen) {
+  app.use(groep.mountPath, groep.router);
+}
+
+// Onbekende routes en fouten krijgen het gedocumenteerde formaat {"fout": "..."}.
+app.use((req: Request, res: Response) => {
+  res.status(404).json({ fout: `route ${req.method} ${req.originalUrl} bestaat niet` });
+});
+
+app.use((error: unknown, req: Request, res: Response, next: NextFunction) => {
+  if (error instanceof HttpFout) {
+    res.status(error.status).json({ fout: error.message });
+    return;
+  }
+  // Fouten van Express zelf met een 4xx-status, bv. ongeldige JSON in de request body.
+  const status = (error as { status?: number }).status;
+  if (status && status >= 400 && status < 500) {
+    res.status(status).json({ fout: (error as Error).message });
+    return;
+  }
+  console.error(`[FOUT] ${req.method} ${req.originalUrl}:`, error);
+  res.status(500).json({ fout: 'Onverwachte fout in de back-end' });
+});
 
 // Vercel gebruikt dit bestand als startpunt en verwacht de app als default export.
 export default app;
