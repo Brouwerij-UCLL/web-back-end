@@ -115,6 +115,20 @@ De back-end gebruikt SQLite via de in Node ingebouwde module `node:sqlite`. Je h
 
 Controleer de verbinding via [http://localhost:3000/health/db](http://localhost:3000/health/db).
 
+### Datamodel recepten
+
+Sinds migratie 003 gebruikt de database Engelse tabel- en kolomnamen. De API geeft Nederlandse veldnamen terug (bv. `recipes.name` wordt `naam`).
+
+| Tabel | Inhoud |
+|---|---|
+| `recipes` | naam, bierstijl, beschrijving, aanmaak- en wijzigingstijd |
+| `ingredients`, `hops`, `extra_ingredients` | catalogi die recepten delen (een hop of mout bestaat één keer) |
+| `recipe_ingredients` | vergistbare ingrediënten per recept, hoeveelheid in gram |
+| `hop_additions` | hopgiften per recept: hoeveelheid en kooktijd; dezelfde hop kan meerdere keren |
+| `recipe_extras` | extra ingrediënten per recept met toevoegmoment (`beslag` of `koken`) en kooktijd bij koken |
+| `recipe_water` | maisch- en spoelwater in liter |
+| `recipe_mash_steps`, `recipe_fermentation_steps` | maisch- en vergistingsstappen met temperatuur en duur |
+
 ## Starten
 
 Development (herstart automatisch bij wijzigingen):
