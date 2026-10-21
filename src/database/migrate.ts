@@ -17,8 +17,9 @@ export default function migrate(): void {
       db.prepare('INSERT INTO migrations (name, applied_at) VALUES (?, ?)').run(name, new Date().toISOString());
       db.exec('COMMIT');
     } catch (error) {
-      db.exec('ROLLBACK');
-      throw new Error(`migratie ${name} is mislukt: ${(error as Error).message}`);
+      if (db.isTransaction) db.exec('ROLLBACK');
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`migratie ${name} is mislukt: ${message}`, { cause: error });
     }
     console.log(`migratie uitgevoerd: ${name}`);
   }
