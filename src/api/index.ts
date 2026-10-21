@@ -1,7 +1,6 @@
-import { Router } from 'express';
-import { receptenRouter } from './recepten/routes.ts';
+import { health } from './health.ts';
+import { recepten } from './recepten/routes.ts';
 
-// Alle REST-endpoints onder /api. Voeg per onderdeel een router toe.
-export const apiRouter: Router = Router();
-
-apiRouter.use('/recepten', receptenRouter);
+// Alle groepen endpoints. Een nieuwe groep maak je met createRoutes en voeg je hier toe;
+// app.ts koppelt ze en de documentatie neemt ze automatisch op.
+export const routeGroepen = [health, recepten];

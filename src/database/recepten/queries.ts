@@ -3,15 +3,15 @@ import { db } from '../db.ts';
 export type ReceptOverzicht = {
   id: number;
   naam: string;
-  bierstijl: string;
+  bierstijl: string | null;
   beschrijving: string | null;
 };
 
+// SQLite geeft datums terug als tekst, bv. "2026-10-14 12:38:49".
 export type Recept = ReceptOverzicht & {
-  bierstijl: string;
   basis_volume_liter: number;
-  aangemaakt_op: Date;
-  gewijzigd_op: Date;
+  aangemaakt_op: string;
+  gewijzigd_op: string;
 };
 
 export type Ingredient = {
@@ -30,12 +30,15 @@ export function getRecepten(): ReceptOverzicht[] {
   return db.prepare('SELECT id, naam, beschrijving, bierstijl FROM recepten ORDER BY naam').all() as ReceptOverzicht[];
 }
 
-export function getRecept(id: number): ReceptOverzicht | undefined {
+export function getRecept(id: number): Recept | undefined {
   return db.prepare('SELECT * FROM recepten WHERE id = ?').get(id) as Recept | undefined;
 }
 
-export function getReceptIngredients(id: number): Ingredient[] | undefined {
-  return db.prepare('SELECT * FROM recept_ingredienten WHERE recept_id = ?').all(id) as Ingredient[] | undefined;
+// Geeft een lege lijst als het recept geen ingrediënten heeft of niet bestaat.
+export function getReceptIngredients(id: number): Ingredient[] {
+  return db
+    .prepare('SELECT id AS ingredient_id, naam, fabrikant, hoeveelheid_kg FROM recept_ingredienten WHERE recept_id = ?')
+    .all(id) as Ingredient[];
 }
 
 export function getReceptWithIngredients(id: number): ReceptWithIngredients | undefined {
