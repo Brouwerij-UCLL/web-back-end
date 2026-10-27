@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 
 // Groepen in de documentatie; elk endpoint hoort bij precies één groep.
-export type Tag = 'recepten' | 'brouwsessies' | 'installatie' | 'health';
+export type Tag = 'recepten' | 'ingredients' | 'brouwsessies' | 'installatie' | 'health';
 
 type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
@@ -19,22 +19,23 @@ export class HttpFout extends Error {
   }
 }
 
-export type RouteDefinitie<P extends z.ZodObject, B extends z.ZodType, R extends z.ZodType> = {
+export type RouteDefinitie<P extends z.ZodObject, Q extends z.ZodObject, B extends z.ZodType, R extends z.ZodType> = {
   method: Method;
   path: string; // relatief aan de groep, bv. '/:id'
   summary: string;
   description?: string;
   params?: P;
+  query?: Q; // queryparameters, bv. ?search=malt
   body?: B;
-  status?: 200 | 201;
+  status?: 200 | 201 | 204; // 204: geen inhoud in het antwoord
   response: R;
   responseDescription: string;
   errors?: Partial<Record<FoutStatus, string>>; // statuscode -> wanneer die fout optreedt
   auth?: boolean; // true: endpoint vereist een ingelogde gebruiker (JWT)
-  handler: (input: { params: z.output<P>; body: z.output<B> }) => z.input<R> | Promise<z.input<R>>;
+  handler: (input: { params: z.output<P>; query: z.output<Q>; body: z.output<B> }) => z.input<R> | Promise<z.input<R>>;
 };
 
-export type Operatie = Omit<RouteDefinitie<z.ZodObject, z.ZodType, z.ZodType>, 'handler'> & {
+export type Operatie = Omit<RouteDefinitie<z.ZodObject, z.ZodObject, z.ZodType, z.ZodType>, 'handler'> & {
   pad: string; // volledig Express-pad, bv. '/api/recepten/:id'
   tag: Tag;
 };
@@ -56,9 +57,12 @@ function valideer<T extends z.ZodType>(schema: T | undefined, waarde: unknown, w
 export function createRoutes(mountPath: string, tag: Tag) {
   const router = Router();
 
-  function route<P extends z.ZodObject = z.ZodObject<{}>, B extends z.ZodType = z.ZodUndefined, R extends z.ZodType = z.ZodType>(
-    definitie: RouteDefinitie<P, B, R>,
-  ): void {
+  function route<
+    P extends z.ZodObject = z.ZodObject<{}>,
+    Q extends z.ZodObject = z.ZodObject<{}>,
+    B extends z.ZodType = z.ZodUndefined,
+    R extends z.ZodType = z.ZodType,
+  >(definitie: RouteDefinitie<P, Q, B, R>): void {
     const { handler, ...documentatie } = definitie;
     operaties.push({ ...documentatie, pad: mountPath + (definitie.path === '/' ? '' : definitie.path), tag });
 
@@ -67,8 +71,13 @@ export function createRoutes(mountPath: string, tag: Tag) {
         throw new HttpFout(401, 'Inloggen vereist: stuur een JWT-token mee als "Authorization: Bearer <token>"');
       }
       const params = valideer(definitie.params, req.params, 'parameter');
+      const query = valideer(definitie.query, req.query, 'queryparameter');
       const body = valideer(definitie.body, req.body, 'request body');
-      const resultaat = await handler({ params, body });
+      const resultaat = await handler({ params, query, body });
+      if (definitie.status === 204) {
+        res.status(204).end();
+        return;
+      }
       // Het antwoord moet aan het gedocumenteerde schema voldoen; zo niet, dan is dat een fout in de back-end (500).
       res.status(definitie.status ?? 200).json(definitie.response.parse(resultaat));
     });
