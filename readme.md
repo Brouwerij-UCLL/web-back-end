@@ -122,7 +122,7 @@ Controleer de verbinding via [http://localhost:3000/health/db](http://localhost:
 
 ### Datamodel recepten
 
-Sinds migratie 003 gebruikt de database Engelse tabel- en kolomnamen. De API geeft Nederlandse veldnamen terug (bv. `recipes.name` wordt `naam`).
+Sinds migratie 003 gebruikt de database Engelse tabel- en kolomnamen. `/api/recepten` geeft nog Nederlandse veldnamen terug (bv. `recipes.name` wordt `naam`); nieuwe endpoints zoals `/api/ingredients` gebruiken de Engelse namen.
 
 | Tabel | Inhoud |
 |---|---|
