@@ -49,6 +49,15 @@ test('Swagger UI is bereikbaar op /api/docs', async () => {
   assert.match(await antwoord.text(), /swagger-ui/i);
 });
 
+test('de bestanden van Swagger UI worden meegeleverd', async () => {
+  // Op Vercel ontbraken deze bestanden; dan krijg je de HTML-pagina terug in plaats van CSS of JavaScript.
+  for (const [pad, type] of [['/api/docs/swagger-ui.css', 'text/css'], ['/api/docs/swagger-ui-bundle.js', 'javascript']]) {
+    const antwoord = await fetch(baseUrl + pad);
+    assert.equal(antwoord.status, 200, `${pad} gaf ${antwoord.status}`);
+    assert.match(antwoord.headers.get('content-type') ?? '', new RegExp(type!), `${pad} heeft het verkeerde type`);
+  }
+});
+
 test('/api/docs/openapi.json is een OpenAPI 3-specificatie', () => {
   assert.match(spec.openapi, /^3\./);
   assert.ok(Object.keys(spec.paths).length > 0, 'geen endpoints gedocumenteerd');
