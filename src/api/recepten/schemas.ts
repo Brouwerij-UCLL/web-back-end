@@ -222,7 +222,7 @@ export const MaischschemaInvoer = z
 export const Maischschema = z
   .object({
     recept_id: z.number().int(),
-    kooktijd_minuten: z.number().int().nullable().meta({ description: 'Kooktijd in minuten; null als er nog geen is ingesteld' }),
+    kooktijd_minuten: z.number().int().nullable().meta({ description: 'Kooktijd in minuten; null als er nog geen is ingesteld. Opgeslagen als laatste maischstap op 100 °C' }),
     stappen: z.array(
       z.object({
         stap_volgorde: z.number().int().meta({ description: 'Volgnummer, vanaf 1' }),

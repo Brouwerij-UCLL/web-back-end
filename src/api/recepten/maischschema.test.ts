@@ -127,9 +127,22 @@ describe('AC2: bestaand schema vervangen', () => {
 
     await put(1, { kooktijd_minuten: 45, stappen: [{ temperatuur_celsius: 67, duur_minuten: 60 }] });
 
-    const rijen = db.prepare('SELECT step_nr, temperature, duration FROM recipe_mash_steps WHERE recipe_id = 1').all();
-    assert.deepEqual(rijen.map((rij) => ({ ...rij })), [{ step_nr: 1, temperature: 67, duration: 60 }]);
-    assert.deepEqual({ ...db.prepare('SELECT boil_time_min FROM recipes WHERE recipe_id = 1').get() }, { boil_time_min: 45 });
+    const rijen = db.prepare('SELECT step_nr, temperature, duration FROM recipe_mash_steps WHERE recipe_id = 1 ORDER BY step_nr').all();
+    assert.deepEqual(rijen.map((rij) => ({ ...rij })), [
+      { step_nr: 1, temperature: 67, duration: 60 },
+      { step_nr: 2, temperature: 100, duration: 45 }, // kookstap: duration = kooktijd
+    ]);
+  });
+
+  test('de kooktijd wordt opgeslagen als laatste stap op 100 °C, met duration = kooktijd', async () => {
+    await put(1, geldigSchema);
+
+    const rijen = db.prepare('SELECT step_nr, temperature, duration FROM recipe_mash_steps WHERE recipe_id = 1 ORDER BY step_nr').all();
+    assert.deepEqual(rijen.map((rij) => ({ ...rij })), [
+      { step_nr: 1, temperature: 63, duration: 45 },
+      { step_nr: 2, temperature: 72, duration: 20 },
+      { step_nr: 3, temperature: 100, duration: 60 },
+    ]);
   });
 
   test('het schema van een ander recept wordt niet aangeraakt', async () => {

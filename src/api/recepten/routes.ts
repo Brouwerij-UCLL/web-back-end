@@ -97,7 +97,8 @@ recepten.route({
   description:
     'Vervangt alle maischstappen en de kooktijd in één keer. De stappen worden genummerd in de volgorde van de lijst. ' +
     'Is één waarde ongeldig, dan wordt er niets opgeslagen en blijft het vorige schema staan. ' +
-    'Grenzen: temperatuur 20–80 °C, duur 1–240 minuten, kooktijd 1–180 minuten.',
+    'Grenzen: temperatuur 20–80 °C, duur 1–240 minuten, kooktijd 1–180 minuten. ' +
+    'In de database is de kooktijd de laatste rij van recipe_mash_steps: temperature = 100 °C en duration = kooktijd.',
   params: ReceptIdParams,
   body: MaischschemaInvoer,
   response: Maischschema,
