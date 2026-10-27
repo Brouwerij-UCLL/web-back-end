@@ -57,9 +57,10 @@ src/
     openapi/        validatie en documentatie van endpoints (createRoutes)
     recepten/       één map per onderdeel
       routes.ts     de endpoints van /api/recepten
+      schemas.ts    schema's van invoer en antwoorden, met voorbeelden
     ingredients/
       routes.ts     de endpoints van /api/ingredients
-      schemas.ts    schema's van invoer en antwoorden, met voorbeelden
+      schemas.ts    schema's van invoer en antwoorden
   database/         alles rond SQLite
     db.ts           de databaseverbinding
     migrate.ts      voert de migraties uit
