@@ -5,3 +5,4 @@ import { receptenRouter } from './recepten/routes.ts';
 export const apiRouter: Router = Router();
 
 apiRouter.use('/recepten', receptenRouter);
+apiRouter.use('/recepten/:id', receptenRouter);
