@@ -123,7 +123,7 @@ test('AC5: het ene schema wijzigen laat het andere ongewijzigd', async () => {
 
   // En omgekeerd: het maischschema wijzigen laat het vergistingsschema staan.
   const vergisting = getFermentationSchedule(1);
-  const antwoord = await fetch(`${baseUrl}/1/maischschema`, {
+  const antwoord = await fetch(`${baseUrl}/1/mash-schedule`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ steps: [{ temperature: 66, duration: 60 }] }),
