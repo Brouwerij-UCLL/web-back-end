@@ -56,7 +56,7 @@ src/
     health.ts       /health/db
     openapi/        validatie en documentatie van endpoints (createRoutes)
     recepten/       één map per onderdeel
-      routes.ts     de endpoints van /api/recepten
+      routes.ts     de endpoints van /api/recipes
       schemas.ts    schema's van invoer en antwoorden, met voorbeelden
     ingredients/
       routes.ts     de endpoints van /api/ingredients

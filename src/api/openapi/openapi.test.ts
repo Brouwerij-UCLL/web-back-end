@@ -71,7 +71,7 @@ test('JWT is gedefinieerd als bearer securityScheme', () => {
 });
 
 test('elk endpoint is volledig gedocumenteerd', () => {
-  const groepen = ['recepten', 'ingredients', 'brouwsessies', 'installatie', 'health'];
+  const groepen = ['recipes', 'ingredients', 'brouwsessies', 'installatie', 'health'];
   for (const [pad, methode, operatie] of operaties()) {
     const naam = `${methode.toUpperCase()} ${pad}`;
     assert.ok(operatie.summary, `${naam}: geen beschrijving`);
@@ -111,7 +111,7 @@ test('"Try it out" met de voorbeeldwaarden geeft het gedocumenteerde antwoord', 
 });
 
 test('fouten hebben het formaat {"fout": "..."}', async () => {
-  for (const url of ['/api/recepten/99', '/api/recepten/abc', '/bestaat-niet']) {
+  for (const url of ['/api/recipes/99', '/api/recipes/abc', '/bestaat-niet']) {
     const antwoord = await fetch(baseUrl + url);
     const body = (await antwoord.json()) as Record<string, unknown>;
     assert.ok(antwoord.status >= 400, `${url} gaf ${antwoord.status}`);
