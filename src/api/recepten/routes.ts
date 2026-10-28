@@ -3,7 +3,7 @@ import { maakRecept, ontbrekendeIds, receptBestaat, vervangRecept, type RecipeIn
 import { createRoutes, HttpFout } from '../openapi/route.ts';
 import { Recipe, RecipeIngredientList, RecipeInput, RecipeList, ReceptIdParams } from './schemas.ts';
 
-export const recepten = createRoutes('/api/recepten', 'recepten');
+export const recepten = createRoutes('/api/recipes', 'recipes');
 
 const nietGevonden = 'Er bestaat geen recept met dit id';
 
@@ -76,7 +76,7 @@ recepten.route({
   path: '/',
   summary: 'Volledig recept opslaan',
   description:
-    'Slaat een nieuw recept met al zijn onderdelen in één keer op (in één transactie). Ingrediënten, hop en extra ingrediënten verwijzen naar de catalogi. Het antwoord heeft hetzelfde formaat als GET /api/recepten/{id}.',
+    'Slaat een nieuw recept met al zijn onderdelen in één keer op (in één transactie). Ingrediënten, hop en extra ingrediënten verwijzen naar de catalogi. Het antwoord heeft hetzelfde formaat als GET /api/recipes/{id}.',
   body: RecipeInput,
   status: 201,
   response: Recipe,

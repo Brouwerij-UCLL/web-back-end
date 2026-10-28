@@ -3,7 +3,7 @@ import { FoutSchema } from './schemas.ts';
 import { operaties, type Operatie, type Tag } from './route.ts';
 
 const tagOmschrijvingen: Record<Tag, string> = {
-  recepten: 'Bierrecepten en hun ingrediënten',
+  recipes: 'Bierrecepten en hun ingrediënten',
   ingredients: 'Catalogus van vergistbare ingrediënten (mouten, suikers, …) die recepten gebruiken',
   brouwsessies: 'Brouwsessies en hun stappen',
   installatie: 'De brouwinstallatie: sensoren en actuatoren',

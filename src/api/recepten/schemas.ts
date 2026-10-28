@@ -129,7 +129,7 @@ export const Recipe = z
   })
   .meta({ example: tripel });
 
-// ----- Invoer voor POST /api/recepten en PUT /api/recepten/{id} (SCRUM-56) -----
+// ----- Invoer voor POST /api/recipes en PUT /api/recipes/{id} (SCRUM-56) -----
 
 const optionalText = (max: number, veld: string) =>
   z

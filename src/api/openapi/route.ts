@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 
 // Groepen in de documentatie; elk endpoint hoort bij precies één groep.
-export type Tag = 'recepten' | 'ingredients' | 'brouwsessies' | 'installatie' | 'health';
+export type Tag = 'recipes' | 'ingredients' | 'brouwsessies' | 'installatie' | 'health';
 
 type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
@@ -36,7 +36,7 @@ export type RouteDefinitie<P extends z.ZodObject, Q extends z.ZodObject, B exten
 };
 
 export type Operatie = Omit<RouteDefinitie<z.ZodObject, z.ZodObject, z.ZodType, z.ZodType>, 'handler'> & {
-  pad: string; // volledig Express-pad, bv. '/api/recepten/:id'
+  pad: string; // volledig Express-pad, bv. '/api/recipes/:id'
   tag: Tag;
 };
 

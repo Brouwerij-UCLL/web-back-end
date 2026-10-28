@@ -15,7 +15,7 @@ let baseUrl: string;
 before(async () => {
   server = app.listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
-  baseUrl = `http://localhost:${(server.address() as AddressInfo).port}/api/recepten`;
+  baseUrl = `http://localhost:${(server.address() as AddressInfo).port}/api/recipes`;
 });
 
 after(() => {
