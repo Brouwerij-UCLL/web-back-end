@@ -23,6 +23,7 @@ export type Vergistbaar = {
 
 export type Hop = {
   id: number;
+  hop_id: number;
   naam: string;
   alfazuur_percentage: number | null;
   type: number;
@@ -132,6 +133,7 @@ export function getRecept(id: number): Recept | undefined {
       'hop', json((
         SELECT json_group_array(json_object(
           'id', hop_additions.hop_addition_id,
+          'hop_id', hops.hop_id,
           'naam', hops.name,
           'alfazuur_percentage', hops.alpha_acid_percentage,
           'type', hops.type,
