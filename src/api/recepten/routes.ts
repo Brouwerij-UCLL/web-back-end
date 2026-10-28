@@ -1,5 +1,12 @@
 import { getRecept, getRecepten, getReceptIngredients } from '../../database/recepten/queries.ts';
-import { maakRecept, ontbrekendeIds, receptBestaat, vervangRecept, type RecipeInput as RecipeInputData } from '../../database/recepten/saveRecipe.ts';
+import {
+  maakRecept,
+  ontbrekendeIds,
+  receptBestaat,
+  vervangRecept,
+  verwijderRecept,
+  type RecipeInput as RecipeInputData,
+} from '../../database/recepten/saveRecipe.ts';
 import { getHopAdditions } from '../../database/recepten/hopAdditions.ts';
 import { getExtras } from '../../database/recepten/extras.ts';
 import { getMashSchedule, replaceMashSchedule } from '../../database/recepten/mashSchedule.ts';
@@ -141,6 +148,26 @@ recepten.route({
     controleerCatalogus(body);
     vervangRecept(params.id, body);
     return getRecept(params.id)!;
+  },
+});
+
+recepten.route({
+  method: 'delete',
+  path: '/:id',
+  summary: 'Recept verwijderen',
+  description:
+    'Verwijdert het recept met alles wat alleen bij dit recept hoort: water, ingrediëntregels, hopgiften, extra ingrediënten, ' +
+    'maisch- en vergistingsstappen. De catalogi (ingrediënten, hops en extra ingrediënten) blijven ongewijzigd.',
+  params: ReceptIdParams,
+  status: 204,
+  response: Recipe,
+  responseDescription: 'Het recept is verwijderd',
+  errors: { 404: nietGevonden },
+  handler: ({ params }) => {
+    const recept = getRecept(params.id);
+    if (!recept) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    verwijderRecept(params.id);
+    return recept;
   },
 });
 
