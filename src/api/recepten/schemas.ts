@@ -127,32 +127,20 @@ export const Recipe = z
   })
   .meta({ example: tripel });
 
-// ----- Hopgiften van een recept: /api/recipes/{id}/hops (SCRUM-52) -----
-// De invoer (HopAdditionInput) staat verder, bij de invoer van het volledige recept.
-
-const saazGift = {
-  id: 7,
-  hop_id: 3,
-  name: 'Saaz',
-  alpha_acid_percentage: 3.5,
+const goldingsGift = {
+  id: 4,
+  hop_id: 4,
+  name: 'Styrian Goldings',
+  alpha_acid_percentage: 5.2,
   type: 1,
-  origin: 'Czech Republic',
-  amount_g: 45,
+  origin: 'Slovenia',
+  amount_g: 35,
   boil_time_min: 60,
 };
 
-export const HopAdditionParams = z
-  .object({
-    id: z.coerce.number().int().positive().meta({ description: 'Id van het recept', example: 2 }),
-    hopAdditionId: z.coerce.number().int().positive().meta({ description: 'Id van de hopgift', example: 4 }),
-  })
-  .meta({ example: { id: 2, hopAdditionId: 4 } });
-
-export const HopAdditionResponse = hopAddition.meta({ example: saazGift });
-
 export const HopAdditionList = z
   .array(hopAddition)
-  .meta({ example: [saazGift, { ...saazGift, id: 8, amount_g: 20, boil_time_min: 10 }] });
+  .meta({ example: [goldingsGift, { ...goldingsGift, id: 5, hop_id: 3, name: 'Saaz', alpha_acid_percentage: 3.5, origin: 'Czech Republic', amount_g: 25, boil_time_min: 15 }] });
 
 // ----- Invoer voor POST /api/recipes en PUT /api/recipes/{id} (SCRUM-56) -----
 
@@ -179,9 +167,6 @@ const hopInput = z
     boil_time_min: z.number().int().min(0, 'kooktijd mag niet negatief zijn').max(180, 'kooktijd mag maximaal 180 minuten zijn'),
   })
   .strict();
-
-// Eén hopgift voor POST /api/recipes/{id}/hops en PUT /api/recipes/{id}/hops/{hopAdditionId}.
-export const HopAdditionInput = hopInput.meta({ example: { hop_id: 3, amount_g: 45, boil_time_min: 60 } });
 
 const extraInput = z
   .object({
