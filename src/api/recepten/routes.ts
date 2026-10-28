@@ -1,11 +1,18 @@
 import { getRecept, getRecepten, getReceptIngredients } from '../../database/recepten/queries.ts';
 import { maakRecept, ontbrekendeIds, receptBestaat, vervangRecept, type RecipeInput as RecipeInputData } from '../../database/recepten/saveRecipe.ts';
+import {
+  addHopAddition,
+  deleteHopAddition,
+  getHopAddition,
+  getHopAdditions,
+  updateHopAddition,
+} from '../../database/recepten/hopAdditions.ts';
 import { addExtra, deleteExtra, getExtra, getExtras, updateExtra } from '../../database/recepten/extras.ts';
 import { getMashSchedule, replaceMashSchedule } from '../../database/recepten/mashSchedule.ts';
 import { getWater, saveWater } from '../../database/recepten/water.ts';
 import { getFermentationSchedule, replaceFermentationSchedule } from '../../database/recepten/fermentationSchedule.ts';
 import { createRoutes, HttpFout } from '../openapi/route.ts';
-import { FermentationSchedule, FermentationScheduleInput, Recipe, MashSchedule, MashScheduleInput, RecipeExtra, RecipeExtraInput, RecipeExtraList, RecipeExtraParams, RecipeExtraUpdate, RecipeIngredientList, RecipeInput, RecipeList, ReceptIdParams, Water, WaterInput } from './schemas.ts';
+import { HopAdditionInput, HopAdditionList, HopAdditionParams, HopAdditionResponse,FermentationSchedule, FermentationScheduleInput, Recipe, MashSchedule, MashScheduleInput, RecipeExtra, RecipeExtraInput, RecipeExtraList, RecipeExtraParams, RecipeExtraUpdate, RecipeIngredientList, RecipeInput, RecipeList, ReceptIdParams, Water, WaterInput } from './schemas.ts';
 
 export const recepten = createRoutes('/api/recipes', 'recipes');
 
@@ -62,6 +69,102 @@ recepten.route({
     const recept = getRecept(params.id);
     if (!recept) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
     return recept;
+  },
+});
+
+// ----- Hopgiften van een recept (SCRUM-52) -----
+
+const hopgiftNietGevonden = 'Het recept bestaat niet, of de hopgift hoort niet bij dit recept';
+
+// De hopgift van dit recept, of 404 als het recept niet bestaat of de gift er niet bij hoort.
+function hopgiftOfFout(recipeId: number, hopAdditionId: number) {
+  if (!receptBestaat(recipeId)) throw new HttpFout(404, `recept ${recipeId} niet gevonden`);
+  const gift = getHopAddition(recipeId, hopAdditionId);
+  if (!gift) throw new HttpFout(404, `hopgift ${hopAdditionId} hoort niet bij recept ${recipeId}`);
+  return gift;
+}
+
+function controleerHop(hopId: number) {
+  if (ontbrekendeIds('hops', [hopId]).length > 0) throw new HttpFout(400, `Ongeldige request body: hop ${hopId} bestaat niet`);
+}
+
+recepten.route({
+  method: 'get',
+  path: '/:id/hops',
+  summary: 'Hopgiften van een recept',
+  description: 'Van langste naar kortste kooktijd, dus in de volgorde waarin ze in de ketel gaan.',
+  params: ReceptIdParams,
+  response: HopAdditionList,
+  responseDescription: 'De hopgiften; een lege lijst als het recept er geen heeft',
+  errors: { 404: nietGevonden },
+  handler: ({ params }) => {
+    if (!receptBestaat(params.id)) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    return getHopAdditions(params.id);
+  },
+});
+
+recepten.route({
+  method: 'get',
+  path: '/:id/hops/:hopAdditionId',
+  summary: 'Eén hopgift van een recept',
+  params: HopAdditionParams,
+  response: HopAdditionResponse,
+  responseDescription: 'De hopgift',
+  errors: { 404: hopgiftNietGevonden },
+  handler: ({ params }) => hopgiftOfFout(params.id, params.hopAdditionId),
+});
+
+recepten.route({
+  method: 'post',
+  path: '/:id/hops',
+  summary: 'Hopgift aan een recept toevoegen',
+  description:
+    'Voegt een hop uit de catalogus (GET /api/hops) toe met hoeveelheid en kooktijd (0–180 minuten). ' +
+    'Dezelfde hop kan meerdere keren gegeven worden; elke gift krijgt een eigen id.',
+  params: ReceptIdParams,
+  body: HopAdditionInput,
+  status: 201,
+  response: HopAdditionResponse,
+  responseDescription: 'De toegevoegde hopgift',
+  errors: { 404: nietGevonden },
+  handler: ({ params, body }) => {
+    if (!receptBestaat(params.id)) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    controleerHop(body.hop_id);
+    return addHopAddition(params.id, body);
+  },
+});
+
+recepten.route({
+  method: 'put',
+  path: '/:id/hops/:hopAdditionId',
+  summary: 'Hopgift van een recept wijzigen',
+  description: 'Vervangt hop, hoeveelheid en kooktijd van deze gift. De andere hopgiften blijven ongewijzigd.',
+  params: HopAdditionParams,
+  body: HopAdditionInput,
+  response: HopAdditionResponse,
+  responseDescription: 'De gewijzigde hopgift',
+  errors: { 404: hopgiftNietGevonden },
+  handler: ({ params, body }) => {
+    hopgiftOfFout(params.id, params.hopAdditionId);
+    controleerHop(body.hop_id);
+    return updateHopAddition(params.id, params.hopAdditionId, body);
+  },
+});
+
+recepten.route({
+  method: 'delete',
+  path: '/:id/hops/:hopAdditionId',
+  summary: 'Hopgift uit een recept verwijderen',
+  description: 'Haalt deze gift uit het recept; de hop blijft in de catalogus staan.',
+  params: HopAdditionParams,
+  status: 204,
+  response: HopAdditionResponse,
+  responseDescription: 'De hopgift is verwijderd',
+  errors: { 404: hopgiftNietGevonden },
+  handler: ({ params }) => {
+    const gift = hopgiftOfFout(params.id, params.hopAdditionId);
+    deleteHopAddition(params.id, params.hopAdditionId);
+    return gift;
   },
 });
 

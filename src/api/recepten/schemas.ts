@@ -154,6 +154,33 @@ export const Recipe = z
   })
   .meta({ example: tripel });
 
+// ----- Hopgiften van een recept: /api/recipes/{id}/hops (SCRUM-52) -----
+// De invoer (HopAdditionInput) staat verder, bij de invoer van het volledige recept.
+
+const saazGift = {
+  id: 7,
+  hop_id: 3,
+  name: 'Saaz',
+  alpha_acid_percentage: 3.5,
+  type: 1,
+  origin: 'Czech Republic',
+  amount_g: 45,
+  boil_time_min: 60,
+};
+
+export const HopAdditionParams = z
+  .object({
+    id: z.coerce.number().int().positive().meta({ description: 'Id van het recept', example: 2 }),
+    hopAdditionId: z.coerce.number().int().positive().meta({ description: 'Id van de hopgift', example: 4 }),
+  })
+  .meta({ example: { id: 2, hopAdditionId: 4 } });
+
+export const HopAdditionResponse = hopAddition.meta({ example: saazGift });
+
+export const HopAdditionList = z
+  .array(hopAddition)
+  .meta({ example: [saazGift, { ...saazGift, id: 8, amount_g: 20, boil_time_min: 10 }] });
+
 // ----- Invoer voor POST /api/recipes en PUT /api/recipes/{id} (SCRUM-56) -----
 
 const optionalText = (max: number, veld: string) =>
@@ -180,6 +207,8 @@ const hopInput = z
   })
   .strict();
 
+// Eén hopgift voor POST /api/recipes/{id}/hops en PUT /api/recipes/{id}/hops/{hopAdditionId}.
+export const HopAdditionInput = hopInput.meta({ example: { hop_id: 3, amount_g: 45, boil_time_min: 60 } });
 // Hoeveelheid, toevoegmoment en kooktijd van een extra ingrediënt; gedeeld door het volledige recept en /extras.
 const extraFields = {
   amount: z.number().positive('hoeveelheid moet groter zijn dan 0'),
