@@ -1,7 +1,8 @@
 import { getRecept, getRecepten, getReceptIngredients } from '../../database/recepten/queries.ts';
 import { maakRecept, ontbrekendeIds, receptBestaat, vervangRecept, type RecipeInput as RecipeInputData } from '../../database/recepten/saveRecipe.ts';
+import { getMashSchedule, replaceMashSchedule } from '../../database/recepten/mashSchedule.ts';
 import { createRoutes, HttpFout } from '../openapi/route.ts';
-import { Recipe, RecipeIngredientList, RecipeInput, RecipeList, ReceptIdParams } from './schemas.ts';
+import { Recipe, MashSchedule, MashScheduleInput, RecipeIngredientList, RecipeInput, RecipeList, ReceptIdParams } from './schemas.ts';
 
 export const recepten = createRoutes('/api/recipes', 'recipes');
 
@@ -103,5 +104,41 @@ recepten.route({
     controleerCatalogus(body);
     vervangRecept(params.id, body);
     return getRecept(params.id)!;
+  },
+});
+
+recepten.route({
+  method: 'get',
+  path: '/:id/maischschema',
+  summary: 'Maischschema van een recept',
+  description: 'De maischstappen in volgorde (step_nr vanaf 1).',
+  params: ReceptIdParams,
+  response: MashSchedule,
+  responseDescription: 'Het maischschema; een lege lijst steps als er nog geen is ingesteld',
+  errors: { 404: nietGevonden },
+  handler: ({ params }) => {
+    const schedule = getMashSchedule(params.id);
+    if (!schedule) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    return schedule;
+  },
+});
+
+recepten.route({
+  method: 'put',
+  path: '/:id/maischschema',
+  summary: 'Maischschema van een recept opslaan of vervangen',
+  description:
+    'Vervangt alle maischstappen in één keer. De stappen worden genummerd in de volgorde van de lijst. ' +
+    'Is één waarde ongeldig, dan wordt er niets opgeslagen en blijft het vorige schema staan. ' +
+    'Grenzen: temperature 20–80 °C, duration 1–240 minuten.',
+  params: ReceptIdParams,
+  body: MashScheduleInput,
+  response: MashSchedule,
+  responseDescription: 'Het opgeslagen maischschema',
+  errors: { 404: nietGevonden },
+  handler: ({ params, body }) => {
+    const schedule = replaceMashSchedule(params.id, body);
+    if (!schedule) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    return schedule;
   },
 });
