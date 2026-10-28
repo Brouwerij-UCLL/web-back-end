@@ -111,10 +111,10 @@ recepten.route({
   method: 'get',
   path: '/:id/maischschema',
   summary: 'Maischschema van een recept',
-  description: 'De maischstappen in volgorde (step_nr vanaf 1) en de kooktijd (boil_time).',
+  description: 'De maischstappen in volgorde (step_nr vanaf 1).',
   params: ReceptIdParams,
   response: MashSchedule,
-  responseDescription: 'Het maischschema; een lege lijst steps en boil_time null als er nog geen is ingesteld',
+  responseDescription: 'Het maischschema; een lege lijst steps als er nog geen is ingesteld',
   errors: { 404: nietGevonden },
   handler: ({ params }) => {
     const schedule = getMashSchedule(params.id);
@@ -128,10 +128,9 @@ recepten.route({
   path: '/:id/maischschema',
   summary: 'Maischschema van een recept opslaan of vervangen',
   description:
-    'Vervangt alle maischstappen en de kooktijd in één keer. De stappen worden genummerd in de volgorde van de lijst. ' +
+    'Vervangt alle maischstappen in één keer. De stappen worden genummerd in de volgorde van de lijst. ' +
     'Is één waarde ongeldig, dan wordt er niets opgeslagen en blijft het vorige schema staan. ' +
-    'Grenzen: temperature 20–80 °C, duration 1–240 minuten, boil_time 1–180 minuten. ' +
-    'In de database is de kooktijd de laatste rij van recipe_mash_steps: temperature = 100 °C en duration = kooktijd.',
+    'Grenzen: temperature 20–80 °C, duration 1–240 minuten.',
   params: ReceptIdParams,
   body: MashScheduleInput,
   response: MashSchedule,
