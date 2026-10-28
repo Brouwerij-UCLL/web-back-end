@@ -308,3 +308,55 @@ export const MashSchedule = z
     ),
   })
   .meta({ example: mashScheduleExample });
+
+// Vergistingsschema: dezelfde veldnamen als fermentation_schedule in GET /api/recipes/{id}.
+// De foutmeldingen noemen de stap (vanaf 1) en het veld.
+
+const fermentationScheduleInputExample = {
+  steps: [
+    { temperature_c: 18, duration_days: 5 },
+    { temperature_c: 20, duration_days: 3 },
+    { temperature_c: 22, duration_days: 2 },
+  ],
+};
+
+const fermentationScheduleExample = {
+  recipe_id: 2,
+  steps: fermentationScheduleInputExample.steps.map((step, i) => ({ step_nr: i + 1, ...step })),
+};
+
+const FermentationStepInput = z.object({
+  temperature_c: z
+    .number({ error: stepError('temperature_c ontbreekt of is geen getal') })
+    .min(0, { error: stepError('temperature_c moet tussen 0 en 30 °C liggen') })
+    .max(30, { error: stepError('temperature_c moet tussen 0 en 30 °C liggen') })
+    .meta({ description: 'Temperatuur in °C, van 0 tot en met 30' }),
+  duration_days: z
+    .number({ error: stepError('duration_days ontbreekt of is geen getal') })
+    .int({ error: stepError('duration_days moet een geheel aantal dagen zijn') })
+    .min(1, { error: stepError('duration_days moet tussen 1 en 90 dagen liggen') })
+    .max(90, { error: stepError('duration_days moet tussen 1 en 90 dagen liggen') })
+    .meta({ description: 'Duur in dagen, van 1 tot en met 90' }),
+});
+
+export const FermentationScheduleInput = z
+  .object({
+    steps: z
+      .array(FermentationStepInput, { error: 'steps moet een lijst zijn' })
+      .min(1, { error: 'steps moet minstens één stap bevatten' })
+      .meta({ description: 'De vergistingsstappen in uitvoeringsvolgorde; de back-end nummert ze vanaf 1 (step_nr)' }),
+  })
+  .meta({ example: fermentationScheduleInputExample });
+
+export const FermentationSchedule = z
+  .object({
+    recipe_id: z.number().int(),
+    steps: z.array(
+      z.object({
+        step_nr: z.number().int().meta({ description: 'Volgnummer, vanaf 1' }),
+        temperature_c: z.number().meta({ description: 'Temperatuur in °C' }),
+        duration_days: z.number().int().meta({ description: 'Duur in dagen' }),
+      }),
+    ),
+  })
+  .meta({ example: fermentationScheduleExample });
