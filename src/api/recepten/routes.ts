@@ -109,7 +109,7 @@ recepten.route({
 
 recepten.route({
   method: 'get',
-  path: '/:id/maischschema',
+  path: '/:id/mash-schedule',
   summary: 'Maischschema van een recept',
   description: 'De maischstappen in volgorde (step_nr vanaf 1).',
   params: ReceptIdParams,
@@ -125,7 +125,7 @@ recepten.route({
 
 recepten.route({
   method: 'put',
-  path: '/:id/maischschema',
+  path: '/:id/mash-schedule',
   summary: 'Maischschema van een recept opslaan of vervangen',
   description:
     'Vervangt alle maischstappen in één keer. De stappen worden genummerd in de volgorde van de lijst. ' +
