@@ -49,7 +49,7 @@ migrations/         SQL-migraties (001_..., 002_...)
 src/
   server.ts         lokaal startpunt: MQTT en webserver starten
   app.ts            de Express-app: migraties, middleware en routers (startpunt op Vercel)
-  config.ts         instellingen uit .env (PORT, DATABASE_FILE, MQTT_URL)
+  config.ts         instellingen uit .env (PORT, DATABASE_FILE, MQTT_URL, CORS_ORIGINS)
   api/              REST-endpoints
     index.ts        lijst van alle groepen endpoints
     docs.ts         Swagger UI op /api/docs
@@ -155,6 +155,20 @@ npm start
 ```
 
 De applicatie draait op [http://localhost:3000](http://localhost:3000), tenzij je een andere `PORT` instelt in `.env`.
+
+### CORS
+
+De API aanspreken vanuit een andere origin (bv. de Angular front-end) mag alleen voor de origins in `CORS_ORIGINS` in `.env`: een kommagescheiden lijst, standaard `http://localhost:4200,http://localhost,https://localhost`.
+
+- Requests vanuit de back-end zelf (bv. "Try it out" in Swagger UI op `/api/docs`) zijn altijd toegelaten, ook op Vercel.
+- Requests zonder `Origin`-header (curl, Postman, andere servers) werken altijd.
+- Een onbekende origin krijgt `403` met `{"fout": "origin ... is niet toegelaten door CORS"}`.
+
+Voor de gedeployde front-end zet je op Vercel bv.:
+
+```
+CORS_ORIGINS=http://localhost:4200,https://<front-end>.vercel.app
+```
 
 ## Database-migraties
 

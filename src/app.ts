@@ -2,28 +2,35 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import { docsRouter } from './api/docs.ts';
 import { routeGroepen } from './api/index.ts';
 import { HttpFout } from './api/openapi/route.ts';
-import cors, {type CorsOptions } from 'cors';
+import cors, { type CorsOptions, type CorsRequest } from 'cors';
+import { config } from './config.ts';
 import migrate from './database/migrate.ts';
 
 // De routes rekenen op een bijgewerkt schema, dus eerst migreren.
 migrate();
 
-const allowedOrigins: string[] = [
-  'http://localhost:4200',
-  'http://localhost',
-  'https://localhost',
-];
+// Is de origin die van de back-end zelf? Browsers sturen ook bij same-origin POST/PUT/DELETE
+// een Origin-header mee, bv. vanuit Swagger UI op /api/docs.
+function isEigenOrigin(origin: string, req: CorsRequest): boolean {
+  try {
+    return new URL(origin).host === req.headers.host;
+  } catch {
+    return false;
+  }
+}
 
-const corsOptions: CorsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    callback(new Error(`Origin ${origin} niet toegelaten door CORS`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+// Onbekende origins krijgen een 403 in het gewone foutformaat in plaats van een 500.
+const corsOptions = (req: CorsRequest, callback: (err: Error | null, options?: CorsOptions) => void) => {
+  const origin = req.headers.origin;
+  if (origin && !config.corsOrigins.includes(origin) && !isEigenOrigin(origin, req)) {
+    return callback(new HttpFout(403, `origin ${origin} is niet toegelaten door CORS`));
+  }
+  callback(null, {
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
 };
 
 export const app: Express = express();
