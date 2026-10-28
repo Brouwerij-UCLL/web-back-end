@@ -5,7 +5,6 @@ import { db } from '../db.ts';
 // Maischstappen zijn hoogstens 80 °C, dus de kookstap is altijd te herkennen.
 // De veldnamen volgen het datamodel (recipe_id, step_nr, temperature, duration).
 
-export const BOIL_TEMPERATURE = 100;
 
 export type MashStepInput = {
   temperature: number; // °C
@@ -36,11 +35,11 @@ export function getMashSchedule(recipeId: number): MashSchedule | undefined {
     .all(recipeId)
     .map((row) => ({ ...row }) as MashStep); // node:sqlite geeft objecten zonder prototype; maak er gewone objecten van
 
-  const boilStep = rows.findLast((row) => row.temperature === BOIL_TEMPERATURE);
+  const boilStep = rows.findLast((row) => row.temperature);
   return {
     recipe_id: recipeId,
     boil_time: boilStep?.duration ?? null,
-    steps: rows.filter((row) => row.temperature !== BOIL_TEMPERATURE),
+    steps: rows.filter((row) => row.temperature ),
   };
 }
 
@@ -59,7 +58,7 @@ export function replaceMashSchedule(recipeId: number, schedule: MashScheduleInpu
     db.prepare('DELETE FROM recipe_mash_steps WHERE recipe_id = ?').run(recipeId);
     const insertStep = db.prepare('INSERT INTO recipe_mash_steps (recipe_id, step_nr, temperature, duration) VALUES (?, ?, ?, ?)');
     schedule.steps.forEach((step, i) => insertStep.run(recipeId, i + 1, step.temperature, step.duration));
-    insertStep.run(recipeId, schedule.steps.length + 1, BOIL_TEMPERATURE, schedule.boil_time);
+    insertStep.run(recipeId, schedule.steps.length + 1, schedule.boil_time);
 
     db.exec('COMMIT');
   } catch (error) {
