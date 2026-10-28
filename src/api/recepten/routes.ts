@@ -1,10 +1,11 @@
 import { getRecept, getRecepten, getReceptIngredients } from '../../database/recepten/queries.ts';
 import { maakRecept, ontbrekendeIds, receptBestaat, vervangRecept, type RecipeInput as RecipeInputData } from '../../database/recepten/saveRecipe.ts';
+import { addExtra, deleteExtra, getExtra, getExtras, updateExtra } from '../../database/recepten/extras.ts';
 import { getMashSchedule, replaceMashSchedule } from '../../database/recepten/mashSchedule.ts';
 import { getWater, saveWater } from '../../database/recepten/water.ts';
 import { getFermentationSchedule, replaceFermentationSchedule } from '../../database/recepten/fermentationSchedule.ts';
 import { createRoutes, HttpFout } from '../openapi/route.ts';
-import { FermentationSchedule, FermentationScheduleInput, Recipe, MashSchedule, MashScheduleInput, RecipeIngredientList, RecipeInput, RecipeList, ReceptIdParams, Water, WaterInput } from './schemas.ts';
+import { FermentationSchedule, FermentationScheduleInput, Recipe, MashSchedule, MashScheduleInput, RecipeExtra, RecipeExtraInput, RecipeExtraList, RecipeExtraParams, RecipeExtraUpdate, RecipeIngredientList, RecipeInput, RecipeList, ReceptIdParams, Water, WaterInput } from './schemas.ts';
 
 export const recepten = createRoutes('/api/recipes', 'recipes');
 
@@ -106,6 +107,102 @@ recepten.route({
     controleerCatalogus(body);
     vervangRecept(params.id, body);
     return getRecept(params.id)!;
+  },
+});
+
+// ----- Extra ingrediënten van een recept (SCRUM-53) -----
+
+const extraNietGevonden = 'Het recept bestaat niet, of het extra ingrediënt zit niet in dit recept';
+
+// Het extra ingrediënt van dit recept, of 404 als het recept niet bestaat of het ingrediënt er niet in zit.
+function extraOfFout(recipeId: number, extraIngredientId: number) {
+  if (!receptBestaat(recipeId)) throw new HttpFout(404, `recept ${recipeId} niet gevonden`);
+  const extra = getExtra(recipeId, extraIngredientId);
+  if (!extra) throw new HttpFout(404, `extra ingrediënt ${extraIngredientId} zit niet in recept ${recipeId}`);
+  return extra;
+}
+
+recepten.route({
+  method: 'get',
+  path: '/:id/extras',
+  summary: 'Extra ingrediënten van een recept',
+  description: 'Eerst de extra ingrediënten voor het beslag, dan die voor het koken van langste naar kortste kooktijd.',
+  params: ReceptIdParams,
+  response: RecipeExtraList,
+  responseDescription: 'De extra ingrediënten; een lege lijst als het recept er geen heeft',
+  errors: { 404: nietGevonden },
+  handler: ({ params }) => {
+    if (!receptBestaat(params.id)) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    return getExtras(params.id);
+  },
+});
+
+recepten.route({
+  method: 'get',
+  path: '/:id/extras/:extraIngredientId',
+  summary: 'Eén extra ingrediënt van een recept',
+  params: RecipeExtraParams,
+  response: RecipeExtra,
+  responseDescription: 'Het extra ingrediënt',
+  errors: { 404: extraNietGevonden },
+  handler: ({ params }) => extraOfFout(params.id, params.extraIngredientId),
+});
+
+recepten.route({
+  method: 'post',
+  path: '/:id/extras',
+  summary: 'Extra ingrediënt aan een recept toevoegen',
+  description:
+    'Voegt een extra ingrediënt uit de catalogus toe met hoeveelheid, toevoegmoment (beslag of koken) en, bij koken, de kooktijd (0–180 minuten). ' +
+    'Bij "beslag" laat je boil_time_min weg of zet je het op null.',
+  params: ReceptIdParams,
+  body: RecipeExtraInput,
+  status: 201,
+  response: RecipeExtra,
+  responseDescription: 'Het toegevoegde extra ingrediënt',
+  errors: { 404: nietGevonden, 409: 'Het extra ingrediënt zit al in dit recept' },
+  handler: ({ params, body }) => {
+    if (!receptBestaat(params.id)) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    if (ontbrekendeIds('extra_ingredients', [body.extra_ingredient_id]).length > 0) {
+      throw new HttpFout(400, `Ongeldige request body: extra ingrediënt ${body.extra_ingredient_id} bestaat niet`);
+    }
+    if (getExtra(params.id, body.extra_ingredient_id)) {
+      throw new HttpFout(409, `extra ingrediënt ${body.extra_ingredient_id} zit al in recept ${params.id}; wijzig het met PUT`);
+    }
+    return addExtra(params.id, body);
+  },
+});
+
+recepten.route({
+  method: 'put',
+  path: '/:id/extras/:extraIngredientId',
+  summary: 'Extra ingrediënt van een recept wijzigen',
+  description: 'Vervangt hoeveelheid, toevoegmoment en kooktijd. De andere extra ingrediënten blijven ongewijzigd.',
+  params: RecipeExtraParams,
+  body: RecipeExtraUpdate,
+  response: RecipeExtra,
+  responseDescription: 'Het gewijzigde extra ingrediënt',
+  errors: { 404: extraNietGevonden },
+  handler: ({ params, body }) => {
+    extraOfFout(params.id, params.extraIngredientId);
+    return updateExtra(params.id, params.extraIngredientId, body);
+  },
+});
+
+recepten.route({
+  method: 'delete',
+  path: '/:id/extras/:extraIngredientId',
+  summary: 'Extra ingrediënt uit een recept verwijderen',
+  description: 'Haalt het extra ingrediënt uit dit recept; het blijft in de catalogus staan.',
+  params: RecipeExtraParams,
+  status: 204,
+  response: RecipeExtra,
+  responseDescription: 'Het extra ingrediënt is verwijderd',
+  errors: { 404: extraNietGevonden },
+  handler: ({ params }) => {
+    const extra = extraOfFout(params.id, params.extraIngredientId);
+    deleteExtra(params.id, params.extraIngredientId);
+    return extra;
   },
 });
 
