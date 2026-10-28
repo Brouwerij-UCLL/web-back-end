@@ -1,65 +1,61 @@
 import { z } from 'zod';
 
-const tripelOverzicht = {
+// Schema's van de recepten-endpoints. Veldnamen zijn Engels; beschrijvingen en foutmeldingen Nederlands.
+
+const tripelSummary = {
   id: 2,
-  naam: 'Gouden Tripel',
-  bierstijl: 'Belgische Tripel',
-  beschrijving: 'Klassieke krachtige blondine met fruitige esters en een volle, warme afdronk.',
+  name: 'Gouden Tripel',
+  beer_style: 'Belgische Tripel',
+  description: 'Klassieke krachtige blondine met fruitige esters en een volle, warme afdronk.',
 };
+
+const pilsnerMalt = { ingredient_id: 1, name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_g: 5500 };
 
 const tripel = {
-  ...tripelOverzicht,
-  aangemaakt_op: '2026-10-14 12:38:49',
-  gewijzigd_op: '2026-10-14 12:38:49',
-};
-
-const pilsnerMout = { ingredient_id: 1, naam: 'Pilsner Malt', fabrikant: 'Dingemans', hoeveelheid_g: 5500 };
-const tripelDetails = {
-  ...tripel,
-  water: { maischwater_liter: 20, spoelwater_liter: 14 },
-  ingredienten: [
-    { ingredient_id: 1, naam: 'Pilsner Malt', fabrikant: 'Dingemans', hoeveelheid_g: 5500 },
-    { ingredient_id: 3, naam: 'Wheat Malt (Tarwemout)', fabrikant: 'Dingemans', hoeveelheid_g: 800 },
-    { ingredient_id: 7, naam: 'CaraPils', fabrikant: 'Dingemans', hoeveelheid_g: 200 },
+  ...tripelSummary,
+  created_at: '2026-10-14 12:38:49',
+  updated_at: '2026-10-14 12:38:49',
+  water: { mash_water_l: 20, sparge_water_l: 14 },
+  ingredients: [
+    pilsnerMalt,
+    { ingredient_id: 3, name: 'Wheat Malt (Tarwemout)', manufacturer: 'Dingemans', amount_g: 800 },
+    { ingredient_id: 7, name: 'CaraPils', manufacturer: 'Dingemans', amount_g: 200 },
   ],
-  vergistbaar: [
-    { id: 1, naam: 'Pilsner Malt', fabrikant: 'Dingemans', hoeveelheid_kg: 5.5 },
-  ],
-  hop: [
+  hops: [
     {
-      id: 1,
+      id: 4,
       hop_id: 4,
-      naam: 'Styrian Goldings',
-      alfazuur_percentage: 5.2,
+      name: 'Styrian Goldings',
+      alpha_acid_percentage: 5.2,
       type: 1,
-      herkomst: 'Slovenia',
-      hoeveelheid_gram: 35,
-      kooktijd_minuten: 60,
+      origin: 'Slovenia',
+      amount_g: 35,
+      boil_time_min: 60,
     },
   ],
-  extra: [
+  extras: [
     {
-      id: 2,
-      naam: 'Kandijsuiker (Wit)',
-      omschrijving: 'Voor hogere vergistingsgraad in zware Belgische bieren',
-      hoeveelheid: 500,
-      eenheid: 'g',
-      toevoegmoment: 'koken',
-      kooktijd_minuten: 15,
+      extra_ingredient_id: 2,
+      name: 'Kandijsuiker (Wit)',
+      description: 'Voor hogere vergistingsgraad in zware Belgische bieren',
+      amount: 500,
+      unit: 'g',
+      add_moment: 'koken',
+      boil_time_min: 15,
     },
   ],
-  maischschema: {
-    stappen: [
-      { stap_volgorde: 1, temperatuur_celsius: 62, duur_minuten: 40 },
-      { stap_volgorde: 2, temperatuur_celsius: 72, duur_minuten: 20 },
-      { stap_volgorde: 3, temperatuur_celsius: 78, duur_minuten: 5 },
+  mash_schedule: {
+    steps: [
+      { step_nr: 1, temperature_c: 62, duration_min: 40 },
+      { step_nr: 2, temperature_c: 72, duration_min: 20 },
+      { step_nr: 3, temperature_c: 78, duration_min: 5 },
     ],
   },
-  vergistingsschema: {
-    stappen: [
-      { stap_volgorde: 1, temperatuur_celsius: 20, duur_dagen: 10 },
-      { stap_volgorde: 2, temperatuur_celsius: 23, duur_dagen: 5 },
-      { stap_volgorde: 3, temperatuur_celsius: 12, duur_dagen: 14 },
+  fermentation_schedule: {
+    steps: [
+      { step_nr: 1, temperature_c: 20, duration_days: 10 },
+      { step_nr: 2, temperature_c: 23, duration_days: 5 },
+      { step_nr: 3, temperature_c: 12, duration_days: 14 },
     ],
   },
 };
@@ -70,99 +66,72 @@ export const ReceptIdParams = z
   })
   .meta({ example: { id: 2 } });
 
-const receptOverzichtVelden = {
+// ----- Antwoorden -----
+
+const summaryFields = {
   id: z.number().int(),
-  naam: z.string(),
-  bierstijl: z.string().nullable(),
-  beschrijving: z.string().nullable(),
+  name: z.string(),
+  beer_style: z.string().nullable(),
+  description: z.string().nullable(),
 };
 
-export const ReceptOverzicht = z.object(receptOverzichtVelden).meta({ example: tripelOverzicht });
+export const RecipeSummary = z.object(summaryFields).meta({ example: tripelSummary });
 
-export const ReceptenLijst = z.array(ReceptOverzicht).meta({ example: [tripelOverzicht] });
+export const RecipeList = z.array(RecipeSummary).meta({ example: [tripelSummary] });
 
-const receptVelden = {
-  ...receptOverzichtVelden,
-  aangemaakt_op: z.string().meta({ description: 'Tijdstip in het formaat "JJJJ-MM-DD uu:mm:ss"' }),
-  gewijzigd_op: z.string().meta({ description: 'Tijdstip in het formaat "JJJJ-MM-DD uu:mm:ss"' }),
-};
+export const RecipeIngredient = z
+  .object({
+    ingredient_id: z.number().int().meta({ description: 'Id in de catalogus (GET /api/ingredients)' }),
+    name: z.string(),
+    manufacturer: z.string().nullable(),
+    amount_g: z.number().meta({ description: 'Hoeveelheid in gram' }),
+  })
+  .meta({ example: pilsnerMalt });
 
-const waterVelden = {
-  maischwater_liter: z.number(),
-  spoelwater_liter: z.number(),
-};
+export const RecipeIngredientList = z.array(RecipeIngredient).meta({ example: [pilsnerMalt] });
 
-const vergistbaarVelden = {
-  id: z.number().int(),
-  naam: z.string(),
-  fabrikant: z.string().nullable(),
-  hoeveelheid_kg: z.number(),
-};
-
-const hopVelden = {
+const hopAddition = z.object({
   id: z.number().int().meta({ description: 'Id van de hopgift binnen dit recept' }),
   hop_id: z.number().int().meta({ description: 'Id van de hop in de catalogus' }),
-  naam: z.string(),
-  alfazuur_percentage: z.number().nullable(),
-  type: z.number().int(),
-  herkomst: z.string().nullable(),
-  hoeveelheid_gram: z.number(),
-  kooktijd_minuten: z.number().int(),
-};
+  name: z.string(),
+  alpha_acid_percentage: z.number().nullable(),
+  type: z.number().int().meta({ description: '0 = bloemen, 1 = pellet' }),
+  origin: z.string().nullable(),
+  amount_g: z.number().meta({ description: 'Hoeveelheid in gram' }),
+  boil_time_min: z.number().int().meta({ description: 'Hoe lang de hop meekookt, in minuten' }),
+});
 
-const extraVelden = {
-  id: z.number().int(),
-  naam: z.string(),
-  omschrijving: z.string().nullable(),
-  hoeveelheid: z.number(),
-  eenheid: z.string(),
-  toevoegmoment: z.enum(['beslag', 'koken']),
-  kooktijd_minuten: z.number().int().nullable(),
-};
+const recipeExtra = z.object({
+  extra_ingredient_id: z.number().int().meta({ description: 'Id van het extra ingrediënt in de catalogus' }),
+  name: z.string(),
+  description: z.string().nullable(),
+  amount: z.number(),
+  unit: z.string(),
+  add_moment: z.enum(['beslag', 'koken']),
+  boil_time_min: z.number().int().nullable().meta({ description: 'Alleen bij add_moment "koken"' }),
+});
 
-const maischstapVelden = {
-  stap_volgorde: z.number().int(),
-  temperatuur_celsius: z.number(),
-  duur_minuten: z.number().int(),
-};
-
-const vergistingsstapVelden = {
-  stap_volgorde: z.number().int(),
-  temperatuur_celsius: z.number(),
-  duur_dagen: z.number().int(),
-};
-
-export const Ingredient = z
+export const Recipe = z
   .object({
-    ingredient_id: z.number().int(),
-    naam: z.string(),
-    fabrikant: z.string().nullable(),
-    hoeveelheid_g: z.number().meta({ description: 'Hoeveelheid in gram' }),
+    ...summaryFields,
+    created_at: z.string().meta({ description: 'Tijdstip in het formaat "JJJJ-MM-DD uu:mm:ss"' }),
+    updated_at: z.string().meta({ description: 'Tijdstip in het formaat "JJJJ-MM-DD uu:mm:ss"' }),
+    water: z.object({ mash_water_l: z.number(), sparge_water_l: z.number() }).nullable(),
+    ingredients: z.array(RecipeIngredient),
+    hops: z.array(hopAddition),
+    extras: z.array(recipeExtra),
+    mash_schedule: z.object({
+      steps: z.array(z.object({ step_nr: z.number().int(), temperature_c: z.number(), duration_min: z.number().int() })),
+    }),
+    fermentation_schedule: z.object({
+      steps: z.array(z.object({ step_nr: z.number().int(), temperature_c: z.number(), duration_days: z.number().int() })),
+    }),
   })
-  .meta({ example: pilsnerMout });
-
-const receptDetailsVelden = {
-  ...receptVelden,
-  water: z.object(waterVelden).nullable(),
-  ingredienten: z.array(Ingredient),
-  vergistbaar: z.array(z.object(vergistbaarVelden)),
-  hop: z.array(z.object(hopVelden)),
-  extra: z.array(z.object(extraVelden)),
-  maischschema: z.object({ stappen: z.array(z.object(maischstapVelden)) }),
-  vergistingsschema: z.object({ stappen: z.array(z.object(vergistingsstapVelden)) }),
-};
-
-export const Recept = z.object(receptDetailsVelden).meta({ example: tripelDetails });
-
-export const IngredientenLijst = z.array(Ingredient).meta({ example: [pilsnerMout] });
-
-export const ReceptMetIngredienten = z
-  .object(receptDetailsVelden)
-  .meta({ example: tripelDetails });
+  .meta({ example: tripel });
 
 // ----- Invoer voor POST /api/recepten en PUT /api/recepten/{id} (SCRUM-56) -----
 
-const optioneleTekst = (max: number, veld: string) =>
+const optionalText = (max: number, veld: string) =>
   z
     .string()
     .trim()
@@ -171,54 +140,54 @@ const optioneleTekst = (max: number, veld: string) =>
     .optional()
     .transform((waarde) => (waarde ? waarde : null));
 
-const ingredientRegel = z
+const ingredientInput = z
   .object({
     ingredient_id: z.number().int().positive().meta({ description: 'Id uit de catalogus (GET /api/ingredients)' }),
-    hoeveelheid_g: z.number().positive('hoeveelheid moet groter zijn dan 0 g').max(100000, 'hoeveelheid mag maximaal 100 kg zijn'),
+    amount_g: z.number().positive('hoeveelheid moet groter zijn dan 0 g').max(100000, 'hoeveelheid mag maximaal 100 kg zijn'),
   })
   .strict();
 
-const hopRegel = z
+const hopInput = z
   .object({
     hop_id: z.number().int().positive().meta({ description: 'Id van de hop in de catalogus' }),
-    hoeveelheid_gram: z.number().positive('hoeveelheid moet groter zijn dan 0 g').max(5000, 'hoeveelheid mag maximaal 5000 g zijn'),
-    kooktijd_minuten: z.number().int().min(0, 'kooktijd mag niet negatief zijn').max(180, 'kooktijd mag maximaal 180 minuten zijn'),
+    amount_g: z.number().positive('hoeveelheid moet groter zijn dan 0 g').max(5000, 'hoeveelheid mag maximaal 5000 g zijn'),
+    boil_time_min: z.number().int().min(0, 'kooktijd mag niet negatief zijn').max(180, 'kooktijd mag maximaal 180 minuten zijn'),
   })
   .strict();
 
-const extraRegel = z
+const extraInput = z
   .object({
     extra_ingredient_id: z.number().int().positive().meta({ description: 'Id van het extra ingrediënt in de catalogus' }),
-    hoeveelheid: z.number().positive('hoeveelheid moet groter zijn dan 0'),
-    toevoegmoment: z.enum(['beslag', 'koken']),
-    kooktijd_minuten: z.number().int().min(0).max(180).nullable().optional().transform((waarde) => waarde ?? null),
+    amount: z.number().positive('hoeveelheid moet groter zijn dan 0'),
+    add_moment: z.enum(['beslag', 'koken']),
+    boil_time_min: z.number().int().min(0).max(180).nullable().optional().transform((waarde) => waarde ?? null),
   })
   .strict()
   .superRefine((regel, ctx) => {
-    if (regel.toevoegmoment === 'koken' && regel.kooktijd_minuten === null) {
-      ctx.addIssue({ code: 'custom', path: ['kooktijd_minuten'], message: 'kooktijd is verplicht bij toevoegmoment "koken"' });
+    if (regel.add_moment === 'koken' && regel.boil_time_min === null) {
+      ctx.addIssue({ code: 'custom', path: ['boil_time_min'], message: 'kooktijd is verplicht bij add_moment "koken"' });
     }
-    if (regel.toevoegmoment === 'beslag' && regel.kooktijd_minuten !== null) {
-      ctx.addIssue({ code: 'custom', path: ['kooktijd_minuten'], message: 'een kooktijd hoort alleen bij toevoegmoment "koken"' });
+    if (regel.add_moment === 'beslag' && regel.boil_time_min !== null) {
+      ctx.addIssue({ code: 'custom', path: ['boil_time_min'], message: 'een kooktijd hoort alleen bij add_moment "koken"' });
     }
   });
 
-const maischstapRegel = z
+const mashStepInput = z
   .object({
-    temperatuur_celsius: z.number().min(20, 'temperatuur moet tussen 20 en 80 °C liggen').max(80, 'temperatuur moet tussen 20 en 80 °C liggen'),
-    duur_minuten: z.number().int().min(1, 'duur moet tussen 1 en 240 minuten liggen').max(240, 'duur moet tussen 1 en 240 minuten liggen'),
+    temperature_c: z.number().min(20, 'temperatuur moet tussen 20 en 80 °C liggen').max(80, 'temperatuur moet tussen 20 en 80 °C liggen'),
+    duration_min: z.number().int().min(1, 'duur moet tussen 1 en 240 minuten liggen').max(240, 'duur moet tussen 1 en 240 minuten liggen'),
   })
   .strict();
 
-const vergistingsstapRegel = z
+const fermentationStepInput = z
   .object({
-    temperatuur_celsius: z.number().min(0, 'temperatuur moet tussen 0 en 30 °C liggen').max(30, 'temperatuur moet tussen 0 en 30 °C liggen'),
-    duur_dagen: z.number().int().min(1, 'duur moet tussen 1 en 90 dagen liggen').max(90, 'duur moet tussen 1 en 90 dagen liggen'),
+    temperature_c: z.number().min(0, 'temperatuur moet tussen 0 en 30 °C liggen').max(30, 'temperatuur moet tussen 0 en 30 °C liggen'),
+    duration_days: z.number().int().min(1, 'duur moet tussen 1 en 90 dagen liggen').max(90, 'duur moet tussen 1 en 90 dagen liggen'),
   })
   .strict();
 
 // Een ingrediënt of extra ingrediënt mag maar één keer in een recept voorkomen (de database laat geen dubbels toe).
-function geenDubbels<T>(lijst: T[], sleutel: (regel: T) => number, veld: string, ctx: z.RefinementCtx) {
+function noDuplicates<T>(lijst: T[], sleutel: (regel: T) => number, veld: string, ctx: z.RefinementCtx) {
   const gezien = new Set<number>();
   lijst.forEach((regel, i) => {
     const id = sleutel(regel);
@@ -227,52 +196,52 @@ function geenDubbels<T>(lijst: T[], sleutel: (regel: T) => number, veld: string,
   });
 }
 
-const receptInvoerVoorbeeld = {
-  naam: 'Gouden Tripel',
-  bierstijl: 'Belgische Tripel',
-  beschrijving: 'Klassieke krachtige blondine met fruitige esters en een volle, warme afdronk.',
-  water: { maischwater_liter: 20, spoelwater_liter: 14 },
-  ingredienten: [
-    { ingredient_id: 1, hoeveelheid_g: 5500 },
-    { ingredient_id: 3, hoeveelheid_g: 800 },
+const recipeInputExample = {
+  name: 'Gouden Tripel',
+  beer_style: 'Belgische Tripel',
+  description: 'Klassieke krachtige blondine met fruitige esters en een volle, warme afdronk.',
+  water: { mash_water_l: 20, sparge_water_l: 14 },
+  ingredients: [
+    { ingredient_id: 1, amount_g: 5500 },
+    { ingredient_id: 3, amount_g: 800 },
   ],
-  hop: [
-    { hop_id: 4, hoeveelheid_gram: 35, kooktijd_minuten: 60 },
-    { hop_id: 3, hoeveelheid_gram: 25, kooktijd_minuten: 15 },
+  hops: [
+    { hop_id: 4, amount_g: 35, boil_time_min: 60 },
+    { hop_id: 3, amount_g: 25, boil_time_min: 15 },
   ],
-  extra: [{ extra_ingredient_id: 2, hoeveelheid: 500, toevoegmoment: 'koken', kooktijd_minuten: 15 }],
-  maischschema: {
-    stappen: [
-      { temperatuur_celsius: 62, duur_minuten: 40 },
-      { temperatuur_celsius: 72, duur_minuten: 20 },
+  extras: [{ extra_ingredient_id: 2, amount: 500, add_moment: 'koken', boil_time_min: 15 }],
+  mash_schedule: {
+    steps: [
+      { temperature_c: 62, duration_min: 40 },
+      { temperature_c: 72, duration_min: 20 },
     ],
   },
-  vergistingsschema: { stappen: [{ temperatuur_celsius: 20, duur_dagen: 10 }] },
+  fermentation_schedule: { steps: [{ temperature_c: 20, duration_days: 10 }] },
 };
 
-export const ReceptInvoer = z
+export const RecipeInput = z
   .object({
-    naam: z.string().trim().min(1, 'naam is verplicht').max(100, 'naam mag maximaal 100 tekens lang zijn'),
-    bierstijl: optioneleTekst(50, 'bierstijl'),
-    beschrijving: optioneleTekst(1000, 'beschrijving'),
+    name: z.string().trim().min(1, 'naam is verplicht').max(100, 'naam mag maximaal 100 tekens lang zijn'),
+    beer_style: optionalText(50, 'bierstijl'),
+    description: optionalText(1000, 'beschrijving'),
     water: z
       .object({
-        maischwater_liter: z.number().positive('maischwater moet groter zijn dan 0 liter').max(500),
-        spoelwater_liter: z.number().min(0, 'spoelwater mag niet negatief zijn').max(500),
+        mash_water_l: z.number().positive('maischwater moet groter zijn dan 0 liter').max(500),
+        sparge_water_l: z.number().min(0, 'spoelwater mag niet negatief zijn').max(500),
       })
       .strict()
       .nullable()
       .optional()
       .transform((waarde) => waarde ?? null),
-    ingredienten: z.array(ingredientRegel).default([]),
-    hop: z.array(hopRegel).default([]),
-    extra: z.array(extraRegel).default([]),
-    maischschema: z.object({ stappen: z.array(maischstapRegel) }).strict().default({ stappen: [] }),
-    vergistingsschema: z.object({ stappen: z.array(vergistingsstapRegel) }).strict().default({ stappen: [] }),
+    ingredients: z.array(ingredientInput).default([]),
+    hops: z.array(hopInput).default([]),
+    extras: z.array(extraInput).default([]),
+    mash_schedule: z.object({ steps: z.array(mashStepInput) }).strict().default({ steps: [] }),
+    fermentation_schedule: z.object({ steps: z.array(fermentationStepInput) }).strict().default({ steps: [] }),
   })
   .strict()
   .superRefine((recept, ctx) => {
-    geenDubbels(recept.ingredienten, (regel) => regel.ingredient_id, 'ingredienten', ctx);
-    geenDubbels(recept.extra, (regel) => regel.extra_ingredient_id, 'extra', ctx);
+    noDuplicates(recept.ingredients, (regel) => regel.ingredient_id, 'ingredients', ctx);
+    noDuplicates(recept.extras, (regel) => regel.extra_ingredient_id, 'extras', ctx);
   })
-  .meta({ example: receptInvoerVoorbeeld });
+  .meta({ example: recipeInputExample });

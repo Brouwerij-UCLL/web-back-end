@@ -35,94 +35,101 @@ async function vraag(methode: string, pad: string, body?: unknown) {
 const aantalRecepten = () => (db.prepare('SELECT count(*) AS n FROM recipes').get() as { n: number }).n;
 
 const volledigRecept = {
-  naam: 'Test Tripel',
-  bierstijl: 'Belgische Tripel',
-  beschrijving: 'Recept uit de test',
-  water: { maischwater_liter: 20, spoelwater_liter: 14 },
-  ingredienten: [
-    { ingredient_id: 1, hoeveelheid_g: 5500 },
-    { ingredient_id: 3, hoeveelheid_g: 800 },
+  name: 'Test Tripel',
+  beer_style: 'Belgische Tripel',
+  description: 'Recept uit de test',
+  water: { mash_water_l: 20, sparge_water_l: 14 },
+  ingredients: [
+    { ingredient_id: 1, amount_g: 5500 },
+    { ingredient_id: 3, amount_g: 800 },
   ],
-  hop: [
-    { hop_id: 4, hoeveelheid_gram: 35, kooktijd_minuten: 60 },
-    { hop_id: 4, hoeveelheid_gram: 20, kooktijd_minuten: 10 },
+  hops: [
+    { hop_id: 4, amount_g: 35, boil_time_min: 60 },
+    { hop_id: 4, amount_g: 20, boil_time_min: 10 },
   ],
-  extra: [
-    { extra_ingredient_id: 2, hoeveelheid: 500, toevoegmoment: 'koken', kooktijd_minuten: 15 },
-    { extra_ingredient_id: 7, hoeveelheid: 50, toevoegmoment: 'beslag' },
+  extras: [
+    { extra_ingredient_id: 2, amount: 500, add_moment: 'koken', boil_time_min: 15 },
+    { extra_ingredient_id: 7, amount: 50, add_moment: 'beslag' },
   ],
-  maischschema: {
-    stappen: [
-      { temperatuur_celsius: 62, duur_minuten: 40 },
-      { temperatuur_celsius: 72, duur_minuten: 20 },
+  mash_schedule: {
+    steps: [
+      { temperature_c: 62, duration_min: 40 },
+      { temperature_c: 72, duration_min: 20 },
     ],
   },
-  vergistingsschema: { stappen: [{ temperatuur_celsius: 20, duur_dagen: 10 }] },
+  fermentation_schedule: { steps: [{ temperature_c: 20, duration_days: 10 }] },
 };
 
 test('AC0: een volledig recept opslaan geeft 201 en het volledige recept', async () => {
   const { status, body } = await vraag('POST', '', volledigRecept);
   assert.equal(status, 201);
   assert.ok(Number.isInteger(body.id));
-  assert.equal(body.naam, 'Test Tripel');
-  assert.deepEqual(body.water, { maischwater_liter: 20, spoelwater_liter: 14 });
+  assert.equal(body.name, 'Test Tripel');
+  assert.deepEqual(body.water, { mash_water_l: 20, sparge_water_l: 14 });
   assert.deepEqual(
-    body.ingredienten.map((r: { ingredient_id: number; hoeveelheid_g: number }) => [r.ingredient_id, r.hoeveelheid_g]),
+    body.ingredients.map((r: { ingredient_id: number; amount_g: number }) => [r.ingredient_id, r.amount_g]),
     [[1, 5500], [3, 800]],
   );
-  assert.equal(body.hop.length, 2, 'dezelfde hop twee keer moet kunnen');
-  assert.deepEqual(body.hop.map((h: { kooktijd_minuten: number }) => h.kooktijd_minuten), [60, 10]);
-  assert.equal(body.extra.length, 2);
-  assert.deepEqual(body.maischschema.stappen.map((s: { stap_volgorde: number }) => s.stap_volgorde), [1, 2]);
-  assert.equal(body.vergistingsschema.stappen[0].duur_dagen, 10);
+  assert.equal(body.hops.length, 2, 'dezelfde hop twee keer moet kunnen');
+  assert.deepEqual(body.hops.map((h: { boil_time_min: number }) => h.boil_time_min), [60, 10]);
+  assert.equal(body.extras.length, 2);
+  assert.deepEqual(body.mash_schedule.steps.map((s: { step_nr: number }) => s.step_nr), [1, 2]);
+  assert.equal(body.fermentation_schedule.steps[0].duration_days, 10);
 });
 
 test('AC1: PUT vervangt alle onderdelen', async () => {
   const { body: nieuw } = await vraag('POST', '', volledigRecept);
   const { status, body } = await vraag('PUT', `/${nieuw.id}`, {
-    naam: 'Test Blond',
-    ingredienten: [{ ingredient_id: 2, hoeveelheid_g: 4000 }],
-    maischschema: { stappen: [{ temperatuur_celsius: 65, duur_minuten: 60 }] },
+    name: 'Test Blond',
+    ingredients: [{ ingredient_id: 2, amount_g: 4000 }],
+    mash_schedule: { steps: [{ temperature_c: 65, duration_min: 60 }] },
   });
   assert.equal(status, 200);
   assert.equal(body.id, nieuw.id);
-  assert.equal(body.naam, 'Test Blond');
-  assert.equal(body.bierstijl, null);
+  assert.equal(body.name, 'Test Blond');
+  assert.equal(body.beer_style, null);
   assert.equal(body.water, null);
-  assert.deepEqual(body.ingredienten.map((r: { ingredient_id: number }) => r.ingredient_id), [2]);
-  assert.deepEqual(body.hop, []);
-  assert.deepEqual(body.extra, []);
-  assert.equal(body.maischschema.stappen.length, 1);
-  assert.deepEqual(body.vergistingsschema.stappen, []);
+  assert.deepEqual(body.ingredients.map((r: { ingredient_id: number }) => r.ingredient_id), [2]);
+  assert.deepEqual(body.hops, []);
+  assert.deepEqual(body.extras, []);
+  assert.equal(body.mash_schedule.steps.length, 1);
+  assert.deepEqual(body.fermentation_schedule.steps, []);
 });
 
 test('AC2: een ongeldig onderdeel geeft 400 met alle fouten, en er wordt niets opgeslagen', async () => {
   const voor = aantalRecepten();
   const { status, body } = await vraag('POST', '', {
     ...volledigRecept,
-    naam: '',
-    maischschema: { stappen: [{ temperatuur_celsius: 62, duur_minuten: 40 }, { temperatuur_celsius: 95, duur_minuten: 20 }] },
-    extra: [{ extra_ingredient_id: 2, hoeveelheid: 500, toevoegmoment: 'koken' }],
+    name: '',
+    mash_schedule: { steps: [{ temperature_c: 62, duration_min: 40 }, { temperature_c: 95, duration_min: 20 }] },
+    extras: [{ extra_ingredient_id: 2, amount: 500, add_moment: 'koken' }],
   });
   assert.equal(status, 400);
-  assert.match(body.fout, /naam/);
-  assert.match(body.fout, /maischschema\.stappen\.1\.temperatuur_celsius/);
-  assert.match(body.fout, /extra\.0\.kooktijd_minuten/);
+  assert.match(body.fout, /name/);
+  assert.match(body.fout, /mash_schedule\.steps\.1\.temperature_c/);
+  assert.match(body.fout, /extras\.0\.boil_time_min/);
   assert.equal(aantalRecepten(), voor);
 });
 
-test('AC2: onbestaande catalogus-ids en dubbele ingrediënten geven 400', async () => {
+test('AC2: onbestaande catalogus-ids, dubbele ingrediënten en onbekende velden geven 400', async () => {
   const voor = aantalRecepten();
-  const onbestaand = await vraag('POST', '', { ...volledigRecept, ingredienten: [{ ingredient_id: 999, hoeveelheid_g: 100 }], hop: [{ hop_id: 999, hoeveelheid_gram: 10, kooktijd_minuten: 5 }] });
+  const onbestaand = await vraag('POST', '', {
+    ...volledigRecept,
+    ingredients: [{ ingredient_id: 999, amount_g: 100 }],
+    hops: [{ hop_id: 999, amount_g: 10, boil_time_min: 5 }],
+  });
   assert.equal(onbestaand.status, 400);
   assert.match(onbestaand.body.fout, /ingrediënt 999 bestaat niet/);
   assert.match(onbestaand.body.fout, /hop 999 bestaat niet/);
 
-  const dubbel = await vraag('POST', '', { ...volledigRecept, ingredienten: [{ ingredient_id: 1, hoeveelheid_g: 100 }, { ingredient_id: 1, hoeveelheid_g: 200 }] });
+  const dubbel = await vraag('POST', '', {
+    ...volledigRecept,
+    ingredients: [{ ingredient_id: 1, amount_g: 100 }, { ingredient_id: 1, amount_g: 200 }],
+  });
   assert.equal(dubbel.status, 400);
-  assert.match(dubbel.body.fout, /ingredienten\.1/);
+  assert.match(dubbel.body.fout, /ingredients\.1/);
 
-  const onbekendVeld = await vraag('POST', '', { ...volledigRecept, basis_volume_liter: 20 });
+  const onbekendVeld = await vraag('POST', '', { ...volledigRecept, naam: 'Nederlands veld' });
   assert.equal(onbekendVeld.status, 400);
   assert.equal(aantalRecepten(), voor);
 });
@@ -130,17 +137,19 @@ test('AC2: onbestaande catalogus-ids en dubbele ingrediënten geven 400', async 
 test('transactie: een fout halverwege laat niets achter', () => {
   const voor = aantalRecepten();
   // Hop 999 bestaat niet: de foreign key faalt pas na het recept, het water en de ingrediënten.
-  assert.throws(() => maakRecept({
-    naam: 'Halverwege mislukt',
-    bierstijl: null,
-    beschrijving: null,
-    water: { maischwater_liter: 10, spoelwater_liter: 5 },
-    ingredienten: [{ ingredient_id: 1, hoeveelheid_g: 100 }],
-    hop: [{ hop_id: 999, hoeveelheid_gram: 10, kooktijd_minuten: 5 }],
-    extra: [],
-    maischschema: { stappen: [] },
-    vergistingsschema: { stappen: [] },
-  }));
+  assert.throws(() =>
+    maakRecept({
+      name: 'Halverwege mislukt',
+      beer_style: null,
+      description: null,
+      water: { mash_water_l: 10, sparge_water_l: 5 },
+      ingredients: [{ ingredient_id: 1, amount_g: 100 }],
+      hops: [{ hop_id: 999, amount_g: 10, boil_time_min: 5 }],
+      extras: [],
+      mash_schedule: { steps: [] },
+      fermentation_schedule: { steps: [] },
+    }),
+  );
   assert.equal(aantalRecepten(), voor);
   assert.equal(db.prepare("SELECT 1 FROM recipes WHERE name = 'Halverwege mislukt'").get(), undefined);
 });
@@ -155,22 +164,46 @@ test('AC3: GET geeft hetzelfde formaat als het antwoord bij het opslaan', async 
 test('AC3: een opgehaald recept kan ongewijzigd teruggestuurd worden met PUT', async () => {
   const { body: recept } = await vraag('GET', '/2');
   const terug = {
-    naam: recept.naam,
-    bierstijl: recept.bierstijl,
-    beschrijving: recept.beschrijving,
+    name: recept.name,
+    beer_style: recept.beer_style,
+    description: recept.description,
     water: recept.water,
-    ingredienten: recept.ingredienten.map((r: { ingredient_id: number; hoeveelheid_g: number }) => ({ ingredient_id: r.ingredient_id, hoeveelheid_g: r.hoeveelheid_g })),
-    hop: recept.hop.map((h: { hop_id: number; hoeveelheid_gram: number; kooktijd_minuten: number }) => ({ hop_id: h.hop_id, hoeveelheid_gram: h.hoeveelheid_gram, kooktijd_minuten: h.kooktijd_minuten })),
-    extra: recept.extra.map((e: { id: number; hoeveelheid: number; toevoegmoment: string; kooktijd_minuten: number | null }) => ({ extra_ingredient_id: e.id, hoeveelheid: e.hoeveelheid, toevoegmoment: e.toevoegmoment, kooktijd_minuten: e.kooktijd_minuten })),
-    maischschema: { stappen: recept.maischschema.stappen.map((s: { temperatuur_celsius: number; duur_minuten: number }) => ({ temperatuur_celsius: s.temperatuur_celsius, duur_minuten: s.duur_minuten })) },
-    vergistingsschema: { stappen: recept.vergistingsschema.stappen.map((s: { temperatuur_celsius: number; duur_dagen: number }) => ({ temperatuur_celsius: s.temperatuur_celsius, duur_dagen: s.duur_dagen })) },
+    ingredients: recept.ingredients.map((r: { ingredient_id: number; amount_g: number }) => ({
+      ingredient_id: r.ingredient_id,
+      amount_g: r.amount_g,
+    })),
+    hops: recept.hops.map((h: { hop_id: number; amount_g: number; boil_time_min: number }) => ({
+      hop_id: h.hop_id,
+      amount_g: h.amount_g,
+      boil_time_min: h.boil_time_min,
+    })),
+    extras: recept.extras.map(
+      (e: { extra_ingredient_id: number; amount: number; add_moment: string; boil_time_min: number | null }) => ({
+        extra_ingredient_id: e.extra_ingredient_id,
+        amount: e.amount,
+        add_moment: e.add_moment,
+        boil_time_min: e.boil_time_min,
+      }),
+    ),
+    mash_schedule: {
+      steps: recept.mash_schedule.steps.map((s: { temperature_c: number; duration_min: number }) => ({
+        temperature_c: s.temperature_c,
+        duration_min: s.duration_min,
+      })),
+    },
+    fermentation_schedule: {
+      steps: recept.fermentation_schedule.steps.map((s: { temperature_c: number; duration_days: number }) => ({
+        temperature_c: s.temperature_c,
+        duration_days: s.duration_days,
+      })),
+    },
   };
   const { status, body } = await vraag('PUT', '/2', terug);
   assert.equal(status, 200);
   // Bij PUT worden de hopgiften opnieuw aangemaakt: hun eigen id verandert, de inhoud niet.
-  const zonderVluchtigeVelden = ({ gewijzigd_op: _, hop, ...rest }: { gewijzigd_op: string; hop: { id: number }[] }) => ({
+  const zonderVluchtigeVelden = ({ updated_at: _, hops, ...rest }: { updated_at: string; hops: { id: number }[] }) => ({
     ...rest,
-    hop: hop.map(({ id: _id, ...gift }) => gift),
+    hops: hops.map(({ id: _id, ...gift }) => gift),
   });
   assert.deepEqual(zonderVluchtigeVelden(body), zonderVluchtigeVelden(recept));
 });
