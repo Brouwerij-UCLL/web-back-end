@@ -5,6 +5,7 @@ import { operaties, type Operatie, type Tag } from './route.ts';
 const tagOmschrijvingen: Record<Tag, string> = {
   recipes: 'Bierrecepten en hun ingrediënten',
   ingredients: 'Catalogus van vergistbare ingrediënten (mouten, suikers, …) die recepten gebruiken',
+  hops: 'Catalogus van hops die recepten gebruiken',
   brouwsessies: 'Brouwsessies en hun stappen',
   installatie: 'De brouwinstallatie: sensoren en actuatoren',
   health: 'Status van de back-end',
