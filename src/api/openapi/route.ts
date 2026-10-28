@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 
 // Groepen in de documentatie; elk endpoint hoort bij precies één groep.
-export type Tag = 'recipes' | 'ingredients' | 'brouwsessies' | 'installatie' | 'health';
+export type Tag = 'recipes' | 'ingredients' | 'hops' | 'brouwsessies' | 'installatie' | 'health';
 
 type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 

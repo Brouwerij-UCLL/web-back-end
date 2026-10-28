@@ -71,7 +71,7 @@ test('JWT is gedefinieerd als bearer securityScheme', () => {
 });
 
 test('elk endpoint is volledig gedocumenteerd', () => {
-  const groepen = ['recipes', 'ingredients', 'brouwsessies', 'installatie', 'health'];
+  const groepen = ['recipes', 'ingredients', 'hops', 'brouwsessies', 'installatie', 'health'];
   for (const [pad, methode, operatie] of operaties()) {
     const naam = `${methode.toUpperCase()} ${pad}`;
     assert.ok(operatie.summary, `${naam}: geen beschrijving`);
