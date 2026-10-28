@@ -123,3 +123,11 @@ test('fouten hebben het formaat {"fout": "..."}', async () => {
   assert.equal(antwoord.status, 400);
   assert.match(body.fout, /id: moet een geheel getal van minimaal 1 zijn/);
 });
+
+test('een niet-geheel recept-id geeft aan welke parameter ongeldig is', async () => {
+  const antwoord = await fetch(`${baseUrl}/api/recepten/1.5`);
+  const body = await antwoord.json() as { fout: string };
+
+  assert.equal(antwoord.status, 400);
+  assert.match(body.fout, /id: moet een geheel getal van minimaal 1 zijn/);
+});
