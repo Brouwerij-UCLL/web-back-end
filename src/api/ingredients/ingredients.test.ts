@@ -85,7 +85,7 @@ test('AC5: ingrediënt wijzigen, recepten tonen de nieuwe naam', async () => {
 
   // Recept 2 (Gouden Tripel) gebruikt ingrediënt 3.
   const recept = await fetch(baseUrl.replace('/ingredients', '/recepten/2/ingredients')).then((r) => r.json());
-  assert.ok(recept.some((ingredient: { naam: string }) => ingredient.naam === 'Tarwemout'));
+  assert.ok(recept.some((ingredient: { name: string }) => ingredient.name === 'Tarwemout'));
 });
 
 test('AC6: ongebruikt ingrediënt verwijderen', async () => {
