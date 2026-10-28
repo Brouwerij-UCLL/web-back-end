@@ -116,4 +116,10 @@ test('fouten hebben het formaat {"fout": "..."}', async () => {
     assert.ok(antwoord.status >= 400, `${url} gaf ${antwoord.status}`);
     assert.deepEqual(Object.keys(body), ['fout'], `${url}: ${JSON.stringify(body)}`);
   }
+
+  // Een recept-id van 0 moet een 400 geven met een Nederlandstalige uitleg van de toegelaten waarde.
+  const antwoord = await fetch(`${baseUrl}/api/recepten/0`);
+  const body = await antwoord.json() as { fout: string };
+  assert.equal(antwoord.status, 400);
+  assert.match(body.fout, /id: moet groter zijn dan 0/);
 });
