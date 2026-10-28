@@ -121,5 +121,5 @@ test('fouten hebben het formaat {"fout": "..."}', async () => {
   const antwoord = await fetch(`${baseUrl}/api/recepten/0`);
   const body = await antwoord.json() as { fout: string };
   assert.equal(antwoord.status, 400);
-  assert.match(body.fout, /id: moet groter zijn dan 0/);
+  assert.match(body.fout, /id: moet een geheel getal van minimaal 1 zijn/);
 });

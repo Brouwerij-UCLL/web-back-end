@@ -65,9 +65,9 @@ const tripelDetails = {
 
 export const ReceptIdParams = z
   .object({
-    id: z.coerce.number()
-      .int({ error: 'moet een geheel getal zijn' })
-      .positive({ error: 'moet groter zijn dan 0' })
+    id: z.coerce.number({ error: 'moet een geheel getal van minimaal 1 zijn' })
+      .int({ error: 'moet een geheel getal van minimaal 1 zijn' })
+      .positive({ error: 'moet een geheel getal van minimaal 1 zijn' })
       .meta({ description: 'Id van het recept', example: 2 }),
   })
   .meta({ example: { id: 2 } });
