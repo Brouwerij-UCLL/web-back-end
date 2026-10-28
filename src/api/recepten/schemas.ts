@@ -155,7 +155,6 @@ export const Recipe = z
   .meta({ example: tripel });
 
 // ----- Hopgiften van een recept: /api/recipes/{id}/hops (SCRUM-52) -----
-// De invoer (HopAdditionInput) staat verder, bij de invoer van het volledige recept.
 
 const saazGift = {
   id: 7,
@@ -167,15 +166,6 @@ const saazGift = {
   amount_g: 45,
   boil_time_min: 60,
 };
-
-export const HopAdditionParams = z
-  .object({
-    id: z.coerce.number().int().positive().meta({ description: 'Id van het recept', example: 2 }),
-    hopAdditionId: z.coerce.number().int().positive().meta({ description: 'Id van de hopgift', example: 4 }),
-  })
-  .meta({ example: { id: 2, hopAdditionId: 4 } });
-
-export const HopAdditionResponse = hopAddition.meta({ example: saazGift });
 
 export const HopAdditionList = z
   .array(hopAddition)
@@ -206,10 +196,7 @@ const hopInput = z
     boil_time_min: z.number().int().min(0, 'kooktijd mag niet negatief zijn').max(180, 'kooktijd mag maximaal 180 minuten zijn'),
   })
   .strict();
-
-// Eén hopgift voor POST /api/recipes/{id}/hops en PUT /api/recipes/{id}/hops/{hopAdditionId}.
-export const HopAdditionInput = hopInput.meta({ example: { hop_id: 3, amount_g: 45, boil_time_min: 60 } });
-// Hoeveelheid, toevoegmoment en kooktijd van een extra ingrediënt; gedeeld door het volledige recept en /extras.
+// Hoeveelheid, toevoegmoment en kooktijd van een extra ingrediënt in het volledige recept.
 const extraFields = {
   amount: z.number().positive('hoeveelheid moet groter zijn dan 0'),
   add_moment: z.enum(['beslag', 'koken']),
@@ -314,29 +301,6 @@ export const RecipeInput = z
     noDuplicates(recept.extras, (regel) => regel.extra_ingredient_id, 'extras', ctx);
   })
   .meta({ example: recipeInputExample });
-
-// ----- Extra ingrediënten van een recept: /api/recipes/{id}/extras (SCRUM-53) -----
-
-export const RecipeExtraParams = z
-  .object({
-    id: z.coerce.number().int().positive().meta({ description: 'Id van het recept', example: 2 }),
-    extraIngredientId: z.coerce
-      .number()
-      .int()
-      .positive()
-      .meta({ description: 'Id van het extra ingrediënt in de catalogus', example: 2 }),
-  })
-  .meta({ example: { id: 2, extraIngredientId: 2 } });
-
-export const RecipeExtraInput = extraInput.meta({
-  example: { extra_ingredient_id: 1, amount: 10, add_moment: 'koken', boil_time_min: 5 },
-});
-
-export const RecipeExtraUpdate = z
-  .object(extraFields)
-  .strict()
-  .superRefine(checkBoilTime)
-  .meta({ example: { amount: 1000, add_moment: 'beslag', boil_time_min: null } });
 
 // Maischschema: de maischstappen, met de veldnamen van het datamodel.
 // De foutmeldingen noemen de stap (vanaf 1) en het veld.

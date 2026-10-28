@@ -33,7 +33,7 @@ const validSchedule = {
 };
 
 async function put(recipeId: number | string, body: unknown): Promise<ApiResponse> {
-  const res = await fetch(`${baseUrl}/${recipeId}/maischschema`, {
+  const res = await fetch(`${baseUrl}/${recipeId}/mash-schedule`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
@@ -42,7 +42,7 @@ async function put(recipeId: number | string, body: unknown): Promise<ApiRespons
 }
 
 async function get(recipeId: number | string): Promise<ApiResponse> {
-  const res = await fetch(`${baseUrl}/${recipeId}/maischschema`);
+  const res = await fetch(`${baseUrl}/${recipeId}/mash-schedule`);
   return { status: res.status, body: await res.json() };
 }
 
