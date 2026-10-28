@@ -1,8 +1,9 @@
 import { getRecept, getRecepten, getReceptIngredients } from '../../database/recepten/queries.ts';
 import { maakRecept, ontbrekendeIds, receptBestaat, vervangRecept, type RecipeInput as RecipeInputData } from '../../database/recepten/saveRecipe.ts';
 import { getMashSchedule, replaceMashSchedule } from '../../database/recepten/mashSchedule.ts';
+import { getFermentationSchedule, replaceFermentationSchedule } from '../../database/recepten/fermentationSchedule.ts';
 import { createRoutes, HttpFout } from '../openapi/route.ts';
-import { Recipe, MashSchedule, MashScheduleInput, RecipeIngredientList, RecipeInput, RecipeList, ReceptIdParams } from './schemas.ts';
+import { FermentationSchedule, FermentationScheduleInput, Recipe, MashSchedule, MashScheduleInput, RecipeIngredientList, RecipeInput, RecipeList, ReceptIdParams } from './schemas.ts';
 
 export const recepten = createRoutes('/api/recipes', 'recipes');
 
@@ -138,6 +139,42 @@ recepten.route({
   errors: { 404: nietGevonden },
   handler: ({ params, body }) => {
     const schedule = replaceMashSchedule(params.id, body);
+    if (!schedule) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    return schedule;
+  },
+});
+
+recepten.route({
+  method: 'get',
+  path: '/:id/fermentation-schedule',
+  summary: 'Vergistingsschema van een recept',
+  description: 'De vergistingsstappen in volgorde (step_nr vanaf 1).',
+  params: ReceptIdParams,
+  response: FermentationSchedule,
+  responseDescription: 'Het vergistingsschema; een lege lijst steps als er nog geen is ingesteld',
+  errors: { 404: nietGevonden },
+  handler: ({ params }) => {
+    const schedule = getFermentationSchedule(params.id);
+    if (!schedule) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    return schedule;
+  },
+});
+
+recepten.route({
+  method: 'put',
+  path: '/:id/fermentation-schedule',
+  summary: 'Vergistingsschema van een recept opslaan of vervangen',
+  description:
+    'Vervangt alle vergistingsstappen in één keer. De stappen worden genummerd in de volgorde van de lijst. ' +
+    'Is één waarde ongeldig, dan wordt er niets opgeslagen en blijft het vorige schema staan. ' +
+    'Het maischschema blijft ongewijzigd. Grenzen: temperature_c 0–30 °C, duration_days 1–90 dagen.',
+  params: ReceptIdParams,
+  body: FermentationScheduleInput,
+  response: FermentationSchedule,
+  responseDescription: 'Het opgeslagen vergistingsschema',
+  errors: { 404: nietGevonden },
+  handler: ({ params, body }) => {
+    const schedule = replaceFermentationSchedule(params.id, body);
     if (!schedule) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
     return schedule;
   },
