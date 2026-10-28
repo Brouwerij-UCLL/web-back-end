@@ -158,77 +158,84 @@ export const ReceptMetIngredienten = z
   .object(receptDetailsVelden)
   .meta({ example: tripelDetails });
 
-// Maischschema: stappen + kooktijd. De foutmeldingen noemen de stap (vanaf 1) en het veld.
+// Maischschema: steps + boil_time, met de veldnamen van het datamodel.
+// De foutmeldingen noemen de stap (vanaf 1) en het veld.
 
-const maischschemaInvoer = {
-  kooktijd_minuten: 60,
-  stappen: [
-    { temperatuur_celsius: 63, duur_minuten: 45 },
-    { temperatuur_celsius: 72, duur_minuten: 20 },
+const mashScheduleInputExample = {
+  boil_time: 60,
+  steps: [
+    { temperature: 63, duration: 45 },
+    { temperature: 72, duration: 20 },
   ],
 };
 
-const maischschema = {
-  recept_id: 2,
-  kooktijd_minuten: 60,
-  stappen: [
-    { stap_volgorde: 1, temperatuur_celsius: 63, duur_minuten: 45 },
-    { stap_volgorde: 2, temperatuur_celsius: 72, duur_minuten: 20 },
-  ],
+// Het antwoord is de invoer plus recipe_id en step_nr; zo staat elke waarde maar één keer hier.
+const mashScheduleExample = {
+  recipe_id: 2,
+  boil_time: mashScheduleInputExample.boil_time,
+  steps: mashScheduleInputExample.steps.map((step, i) => ({ step_nr: i + 1, ...step })),
 };
 
-// Foutmelding voor een veld van een stap, bv. "stap 2: temperatuur moet tussen 20 en 80 °C liggen (gekregen: 90)".
-function stapFout(tekst: string) {
+// Foutmelding voor een veld van een stap, bv. "stap 2: temperature moet tussen 20 en 80 °C liggen (gekregen: 90)".
+function stepError(text: string) {
   return (issue: { path?: PropertyKey[]; input?: unknown }) => {
-    const index = issue.path?.find((deel) => typeof deel === 'number');
-    const stap = index === undefined ? 'stap' : `stap ${index + 1}`;
-    return `${stap}: ${tekst}${issue.input === undefined ? '' : ` (gekregen: ${JSON.stringify(issue.input)})`}`;
+    const index = issue.path?.find((part) => typeof part === 'number');
+    const step = index === undefined ? 'stap' : `stap ${index + 1}`;
+    return `${step}: ${text}${received(issue.input)}`;
   };
 }
 
-function kooktijdFout(tekst: string) {
-  return (issue: { input?: unknown }) => `${tekst}${issue.input === undefined ? '' : ` (gekregen: ${JSON.stringify(issue.input)})`}`;
+function boilTimeError(text: string) {
+  return (issue: { input?: unknown }) => `${text}${received(issue.input)}`;
 }
 
-const MaischstapInvoer = z.object({
-  temperatuur_celsius: z
-    .number({ error: stapFout('temperatuur ontbreekt of is geen getal') })
-    .min(20, { error: stapFout('temperatuur moet tussen 20 en 80 °C liggen') })
-    .max(80, { error: stapFout('temperatuur moet tussen 20 en 80 °C liggen') })
+function received(input: unknown): string {
+  return input === undefined ? '' : ` (gekregen: ${JSON.stringify(input)})`;
+}
+
+const MashStepInput = z.object({
+  temperature: z
+    .number({ error: stepError('temperature ontbreekt of is geen getal') })
+    .min(20, { error: stepError('temperature moet tussen 20 en 80 °C liggen') })
+    .max(80, { error: stepError('temperature moet tussen 20 en 80 °C liggen') })
     .meta({ description: 'Temperatuur in °C, van 20 tot en met 80' }),
-  duur_minuten: z
-    .number({ error: stapFout('duur ontbreekt of is geen getal') })
-    .int({ error: stapFout('duur moet een geheel aantal minuten zijn') })
-    .min(1, { error: stapFout('duur moet tussen 1 en 240 minuten liggen') })
-    .max(240, { error: stapFout('duur moet tussen 1 en 240 minuten liggen') })
+  duration: z
+    .number({ error: stepError('duration ontbreekt of is geen getal') })
+    .int({ error: stepError('duration moet een geheel aantal minuten zijn') })
+    .min(1, { error: stepError('duration moet tussen 1 en 240 minuten liggen') })
+    .max(240, { error: stepError('duration moet tussen 1 en 240 minuten liggen') })
     .meta({ description: 'Duur in minuten, van 1 tot en met 240' }),
 });
 
-export const MaischschemaInvoer = z
+export const MashScheduleInput = z
   .object({
-    kooktijd_minuten: z
-      .number({ error: kooktijdFout('ontbreekt of is geen getal') })
-      .int({ error: kooktijdFout('moet een geheel aantal minuten zijn') })
-      .min(1, { error: kooktijdFout('moet tussen 1 en 180 minuten liggen') })
-      .max(180, { error: kooktijdFout('moet tussen 1 en 180 minuten liggen') })
+    boil_time: z
+      .number({ error: boilTimeError('ontbreekt of is geen getal') })
+      .int({ error: boilTimeError('moet een geheel aantal minuten zijn') })
+      .min(1, { error: boilTimeError('moet tussen 1 en 180 minuten liggen') })
+      .max(180, { error: boilTimeError('moet tussen 1 en 180 minuten liggen') })
       .meta({ description: 'Kooktijd in minuten, van 1 tot en met 180' }),
-    stappen: z
-      .array(MaischstapInvoer, { error: 'stappen moet een lijst zijn' })
-      .min(1, { error: 'stappen moet minstens één stap bevatten' })
-      .meta({ description: 'De maischstappen in uitvoeringsvolgorde; de back-end nummert ze vanaf 1' }),
+    steps: z
+      .array(MashStepInput, { error: 'steps moet een lijst zijn' })
+      .min(1, { error: 'steps moet minstens één stap bevatten' })
+      .meta({ description: 'De maischstappen in uitvoeringsvolgorde; de back-end nummert ze vanaf 1 (step_nr)' }),
   })
-  .meta({ example: maischschemaInvoer });
+  .meta({ example: mashScheduleInputExample });
 
-export const Maischschema = z
+export const MashSchedule = z
   .object({
-    recept_id: z.number().int(),
-    kooktijd_minuten: z.number().int().nullable().meta({ description: 'Kooktijd in minuten; null als er nog geen is ingesteld. Opgeslagen als laatste maischstap op 100 °C' }),
-    stappen: z.array(
+    recipe_id: z.number().int(),
+    boil_time: z
+      .number()
+      .int()
+      .nullable()
+      .meta({ description: 'Kooktijd in minuten; null als er nog geen is ingesteld. Opgeslagen als laatste maischstap op 100 °C' }),
+    steps: z.array(
       z.object({
-        stap_volgorde: z.number().int().meta({ description: 'Volgnummer, vanaf 1' }),
-        temperatuur_celsius: z.number(),
-        duur_minuten: z.number().int(),
+        step_nr: z.number().int().meta({ description: 'Volgnummer, vanaf 1' }),
+        temperature: z.number().meta({ description: 'Temperatuur in °C' }),
+        duration: z.number().int().meta({ description: 'Duur in minuten' }),
       }),
     ),
   })
-  .meta({ example: maischschema });
+  .meta({ example: mashScheduleExample });

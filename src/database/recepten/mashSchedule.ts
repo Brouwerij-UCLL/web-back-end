@@ -3,51 +3,44 @@ import { db } from '../db.ts';
 // Maischschema van een recept, opgeslagen in recipe_mash_steps. De kooktijd is
 // de laatste rij: temperature = 100 °C en duration = kooktijd in minuten.
 // Maischstappen zijn hoogstens 80 °C, dus de kookstap is altijd te herkennen.
-// De API gebruikt Nederlandse veldnamen.
+// De veldnamen volgen het datamodel (recipe_id, step_nr, temperature, duration).
 
-export const KOOKTEMPERATUUR_CELSIUS = 100;
+export const BOIL_TEMPERATURE = 100;
 
-export type MaischstapInvoer = {
-  temperatuur_celsius: number;
-  duur_minuten: number;
+export type MashStepInput = {
+  temperature: number; // °C
+  duration: number; // minuten
 };
 
-export type MaischschemaInvoer = {
-  kooktijd_minuten: number;
-  stappen: MaischstapInvoer[];
+export type MashScheduleInput = {
+  boil_time: number; // minuten
+  steps: MashStepInput[];
 };
 
-export type Maischstap = MaischstapInvoer & {
-  stap_volgorde: number;
+export type MashStep = MashStepInput & {
+  step_nr: number;
 };
 
-export type Maischschema = {
-  recept_id: number;
-  kooktijd_minuten: number | null; // null: nog geen kookstap ingesteld
-  stappen: Maischstap[];
+export type MashSchedule = {
+  recipe_id: number;
+  boil_time: number | null; // null: nog geen kookstap ingesteld
+  steps: MashStep[];
 };
 
 // Maischstappen in volgorde en de kooktijd. undefined als het recept niet bestaat.
-export function getMaischschema(receptId: number): Maischschema | undefined {
-  if (!receptBestaat(receptId)) return undefined;
+export function getMashSchedule(recipeId: number): MashSchedule | undefined {
+  if (!recipeExists(recipeId)) return undefined;
 
-  const rijen = db
-    .prepare(`
-      SELECT
-        step_nr AS stap_volgorde,
-        temperature AS temperatuur_celsius,
-        duration AS duur_minuten
-      FROM recipe_mash_steps
-      WHERE recipe_id = ?
-      ORDER BY step_nr`)
-    .all(receptId)
-    .map((rij) => ({ ...rij }) as Maischstap); // node:sqlite geeft objecten zonder prototype; maak er gewone objecten van
+  const rows = db
+    .prepare('SELECT step_nr, temperature, duration FROM recipe_mash_steps WHERE recipe_id = ? ORDER BY step_nr')
+    .all(recipeId)
+    .map((row) => ({ ...row }) as MashStep); // node:sqlite geeft objecten zonder prototype; maak er gewone objecten van
 
-  const kookstap = rijen.findLast((rij) => rij.temperatuur_celsius === KOOKTEMPERATUUR_CELSIUS);
+  const boilStep = rows.findLast((row) => row.temperature === BOIL_TEMPERATURE);
   return {
-    recept_id: receptId,
-    kooktijd_minuten: kookstap?.duur_minuten ?? null,
-    stappen: rijen.filter((rij) => rij.temperatuur_celsius !== KOOKTEMPERATUUR_CELSIUS),
+    recipe_id: recipeId,
+    boil_time: boilStep?.duration ?? null,
+    steps: rows.filter((row) => row.temperature !== BOIL_TEMPERATURE),
   };
 }
 
@@ -55,27 +48,27 @@ export function getMaischschema(receptId: number): Maischschema | undefined {
 // krijgen step_nr 1, 2, 3, ... in de volgorde van de lijst, de kookstap komt erna.
 // Lukt er iets niet, dan wordt alles teruggedraaid en blijft het vorige schema staan.
 // undefined als het recept niet bestaat.
-export function vervangMaischschema(receptId: number, schema: MaischschemaInvoer): Maischschema | undefined {
+export function replaceMashSchedule(recipeId: number, schedule: MashScheduleInput): MashSchedule | undefined {
   db.exec('BEGIN');
   try {
-    if (!receptBestaat(receptId)) {
+    if (!recipeExists(recipeId)) {
       db.exec('ROLLBACK');
       return undefined;
     }
 
-    db.prepare('DELETE FROM recipe_mash_steps WHERE recipe_id = ?').run(receptId);
-    const insertStap = db.prepare('INSERT INTO recipe_mash_steps (recipe_id, step_nr, temperature, duration) VALUES (?, ?, ?, ?)');
-    schema.stappen.forEach((stap, i) => insertStap.run(receptId, i + 1, stap.temperatuur_celsius, stap.duur_minuten));
-    insertStap.run(receptId, schema.stappen.length + 1, KOOKTEMPERATUUR_CELSIUS, schema.kooktijd_minuten);
+    db.prepare('DELETE FROM recipe_mash_steps WHERE recipe_id = ?').run(recipeId);
+    const insertStep = db.prepare('INSERT INTO recipe_mash_steps (recipe_id, step_nr, temperature, duration) VALUES (?, ?, ?, ?)');
+    schedule.steps.forEach((step, i) => insertStep.run(recipeId, i + 1, step.temperature, step.duration));
+    insertStep.run(recipeId, schedule.steps.length + 1, BOIL_TEMPERATURE, schedule.boil_time);
 
     db.exec('COMMIT');
   } catch (error) {
     db.exec('ROLLBACK');
     throw error;
   }
-  return getMaischschema(receptId);
+  return getMashSchedule(recipeId);
 }
 
-function receptBestaat(receptId: number): boolean {
-  return db.prepare('SELECT 1 FROM recipes WHERE recipe_id = ?').get(receptId) !== undefined;
+function recipeExists(recipeId: number): boolean {
+  return db.prepare('SELECT 1 FROM recipes WHERE recipe_id = ?').get(recipeId) !== undefined;
 }
