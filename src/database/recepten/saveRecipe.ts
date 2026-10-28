@@ -89,6 +89,12 @@ export function maakRecept(recept: RecipeInput): number {
   });
 }
 
+// Verwijdert een recept. Wat alleen bij dit recept hoort (water, ingrediëntregels, hopgiften, extra's,
+// maisch- en vergistingsstappen) verdwijnt mee via ON DELETE CASCADE; de catalogi blijven ongewijzigd.
+export function verwijderRecept(id: number): void {
+  db.prepare('DELETE FROM recipes WHERE recipe_id = ?').run(id);
+}
+
 // Vervangt een bestaand recept volledig: basisgegevens en alle onderdelen.
 export function vervangRecept(id: number, recept: RecipeInput): void {
   inTransactie(() => {
