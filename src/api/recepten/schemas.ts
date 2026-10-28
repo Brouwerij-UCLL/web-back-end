@@ -309,6 +309,33 @@ export const MashSchedule = z
   })
   .meta({ example: mashScheduleExample });
 
+// Water van een recept: dezelfde veldnamen als water in GET /api/recipes/{id}.
+
+const waterExample = { mash_water_l: 18.5, sparge_water_l: 12 };
+
+export const WaterInput = z
+  .object({
+    mash_water_l: z
+      .number({ error: 'mash_water_l ontbreekt of is geen getal' })
+      .positive({ error: 'mash_water_l moet groter zijn dan 0 liter' })
+      .max(500, { error: 'mash_water_l mag maximaal 500 liter zijn' })
+      .meta({ description: 'Maischwater in liter, groter dan 0' }),
+    sparge_water_l: z
+      .number({ error: 'sparge_water_l ontbreekt of is geen getal' })
+      .min(0, { error: 'sparge_water_l mag niet negatief zijn' })
+      .max(500, { error: 'sparge_water_l mag maximaal 500 liter zijn' })
+      .meta({ description: 'Spoelwater in liter; 0 als er niet gespoeld wordt' }),
+  })
+  .strict()
+  .meta({ example: waterExample });
+
+export const Water = z
+  .object({
+    recipe_id: z.number().int(),
+    mash_water_l: z.number().nullable().meta({ description: 'Maischwater in liter; null als het nog niet ingesteld is' }),
+    sparge_water_l: z.number().nullable().meta({ description: 'Spoelwater in liter; null als het nog niet ingesteld is' }),
+  })
+  .meta({ example: { recipe_id: 2, ...waterExample } });
 // Vergistingsschema: dezelfde veldnamen als fermentation_schedule in GET /api/recipes/{id}.
 // De foutmeldingen noemen de stap (vanaf 1) en het veld.
 

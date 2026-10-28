@@ -1,9 +1,10 @@
 import { getRecept, getRecepten, getReceptIngredients } from '../../database/recepten/queries.ts';
 import { maakRecept, ontbrekendeIds, receptBestaat, vervangRecept, type RecipeInput as RecipeInputData } from '../../database/recepten/saveRecipe.ts';
 import { getMashSchedule, replaceMashSchedule } from '../../database/recepten/mashSchedule.ts';
+import { getWater, saveWater } from '../../database/recepten/water.ts';
 import { getFermentationSchedule, replaceFermentationSchedule } from '../../database/recepten/fermentationSchedule.ts';
 import { createRoutes, HttpFout } from '../openapi/route.ts';
-import { FermentationSchedule, FermentationScheduleInput, Recipe, MashSchedule, MashScheduleInput, RecipeIngredientList, RecipeInput, RecipeList, ReceptIdParams } from './schemas.ts';
+import { FermentationSchedule, FermentationScheduleInput, Recipe, MashSchedule, MashScheduleInput, RecipeIngredientList, RecipeInput, RecipeList, ReceptIdParams, Water, WaterInput } from './schemas.ts';
 
 export const recepten = createRoutes('/api/recipes', 'recipes');
 
@@ -157,6 +158,41 @@ recepten.route({
     const schedule = getFermentationSchedule(params.id);
     if (!schedule) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
     return schedule;
+  },
+});
+
+recepten.route({
+  method: 'get',
+  path: '/:id/water',
+  summary: 'Maisch- en spoelwater van een recept',
+  description: 'De hoeveelheden water in liter. Dezelfde waarden staan ook in GET /api/recipes/{id}.',
+  params: ReceptIdParams,
+  response: Water,
+  responseDescription: 'Het water; null-waarden als er nog niets is ingesteld',
+  errors: { 404: nietGevonden },
+  handler: ({ params }) => {
+    const water = getWater(params.id);
+    if (!water) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    return water;
+  },  
+});
+
+recepten.route({
+  method: 'put',
+  path: '/:id/water',
+  summary: 'Maisch- en spoelwater van een recept opslaan of wijzigen',
+  description:
+    'Slaat beide hoeveelheden op of vervangt de vorige waarden. De andere receptgegevens blijven ongewijzigd. ' +
+    'Grenzen: mash_water_l groter dan 0, sparge_water_l 0 of meer, elk maximaal 500 liter.',
+  params: ReceptIdParams,
+  body: WaterInput,
+  response: Water,
+  responseDescription: 'Het opgeslagen water',
+  errors: { 404: nietGevonden },
+  handler: ({ params, body }) => {
+    const water = saveWater(params.id, body);
+    if (!water) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    return water;
   },
 });
 
