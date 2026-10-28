@@ -61,6 +61,9 @@ src/
     ingredients/
       routes.ts     de endpoints van /api/ingredients
       schemas.ts    schema's van invoer en antwoorden
+    hops/
+      routes.ts     de endpoints van /api/hops
+      schemas.ts    schema's van invoer en antwoorden
   database/         alles rond SQLite
     db.ts           de databaseverbinding
     migrate.ts      voert de migraties uit
@@ -68,6 +71,8 @@ src/
       queries.ts    de queries op de recepten-tabellen
     ingredients/
       queries.ts    de queries op de catalogus ingredients
+    hops/
+      queries.ts    de queries op de catalogus hops
   mqtt/             verbinding met de MQTT-broker
     client.ts       verbinden en abonneren
     topics.ts       de topics en het ontleden ervan
