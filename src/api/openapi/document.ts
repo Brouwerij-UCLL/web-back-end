@@ -3,7 +3,8 @@ import { FoutSchema } from './schemas.ts';
 import { operaties, type Operatie, type Tag } from './route.ts';
 
 const tagOmschrijvingen: Record<Tag, string> = {
-  recepten: 'Bierrecepten en hun ingrediënten',
+  recipes: 'Bierrecepten en hun ingrediënten',
+  ingredients: 'Catalogus van vergistbare ingrediënten (mouten, suikers, …) die recepten gebruiken',
   brouwsessies: 'Brouwsessies en hun stappen',
   installatie: 'De brouwinstallatie: sensoren en actuatoren',
   health: 'Status van de back-end',
@@ -24,20 +25,24 @@ function foutAntwoord(omschrijving: string) {
 }
 
 function operatieDocument(operatie: Operatie) {
-  const parameters = Object.entries(operatie.params?.shape ?? {}).map(([naam, schema]) => {
-    const parameterSchema = jsonSchema(schema as z.ZodType, 'input');
+  const parameter = (naam: string, schema: z.ZodType, plaats: 'path' | 'query') => {
+    const parameterSchema = jsonSchema(schema, 'input');
     return {
       name: naam,
-      in: 'path',
-      required: true,
+      in: plaats,
+      required: plaats === 'path' || !schema.safeParse(undefined).success,
       description: parameterSchema.description,
       schema: parameterSchema,
       example: parameterSchema.example,
     };
-  });
+  };
+  const parameters = [
+    ...Object.entries(operatie.params?.shape ?? {}).map(([naam, schema]) => parameter(naam, schema as z.ZodType, 'path')),
+    ...Object.entries(operatie.query?.shape ?? {}).map(([naam, schema]) => parameter(naam, schema as z.ZodType, 'query')),
+  ];
 
   const fouten: Record<string, string> = {};
-  if (operatie.params || operatie.body) fouten[400] = 'Ongeldige invoer';
+  if (operatie.params || operatie.query || operatie.body) fouten[400] = 'Ongeldige invoer';
   if (operatie.auth) fouten[401] = 'Niet ingelogd of ongeldig token';
   Object.assign(fouten, operatie.errors);
   fouten[500] = 'Onverwachte fout in de back-end';
@@ -56,10 +61,13 @@ function operatieDocument(operatie: Operatie) {
       },
     }),
     responses: {
-      [operatie.status ?? 200]: {
-        description: operatie.responseDescription,
-        content: { 'application/json': { schema: jsonSchema(operatie.response, 'output') } },
-      },
+      [operatie.status ?? 200]:
+        operatie.status === 204
+          ? { description: operatie.responseDescription }
+          : {
+              description: operatie.responseDescription,
+              content: { 'application/json': { schema: jsonSchema(operatie.response, 'output') } },
+            },
       ...Object.fromEntries(Object.entries(fouten).map(([status, omschrijving]) => [status, foutAntwoord(omschrijving)])),
     },
   };

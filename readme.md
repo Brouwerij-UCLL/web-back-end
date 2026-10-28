@@ -56,13 +56,18 @@ src/
     health.ts       /health/db
     openapi/        validatie en documentatie van endpoints (createRoutes)
     recepten/       één map per onderdeel
-      routes.ts     de endpoints van /api/recepten
+      routes.ts     de endpoints van /api/recipes
       schemas.ts    schema's van invoer en antwoorden, met voorbeelden
+    ingredients/
+      routes.ts     de endpoints van /api/ingredients
+      schemas.ts    schema's van invoer en antwoorden
   database/         alles rond SQLite
     db.ts           de databaseverbinding
     migrate.ts      voert de migraties uit
     recepten/       één map per onderdeel, zoals in api/
       queries.ts    de queries op de recepten-tabellen
+    ingredients/
+      queries.ts    de queries op de catalogus ingredients
   mqtt/             verbinding met de MQTT-broker
     client.ts       verbinden en abonneren
     topics.ts       de topics en het ontleden ervan
@@ -70,6 +75,7 @@ src/
 ```
 
 - Nieuw onderdeel: maak een map in `src/api/` met een `routes.ts` en `schemas.ts` (zoals `recepten/`), maak de groep met `createRoutes` en voeg ze toe aan `src/api/index.ts`.
+- Namen: paden, queryparameters en JSON-velden van nieuwe endpoints zijn Engels (bv. `/api/ingredients`, `name`); beschrijvingen en foutmeldingen blijven Nederlands.
 - Queries: zet ze in `src/database/` in een map met dezelfde naam als in `src/api/` (zoals `recepten/queries.ts`), zodat routes en MQTT-handlers dezelfde functies gebruiken.
 - Nieuw MQTT-topic: voeg het toe in `src/mqtt/topics.ts` en verwerk het in `src/mqtt/handlers.ts`.
 
@@ -117,7 +123,7 @@ Controleer de verbinding via [http://localhost:3000/health/db](http://localhost:
 
 ### Datamodel recepten
 
-Sinds migratie 003 gebruikt de database Engelse tabel- en kolomnamen. De API geeft Nederlandse veldnamen terug (bv. `recipes.name` wordt `naam`).
+Sinds migratie 003 gebruikt de database Engelse tabel- en kolomnamen. De API gebruikt ook Engelse veldnamen, dicht bij die kolommen (bv. `beer_style`, `amount_g`, `mash_schedule.steps[].temperature_c`); beschrijvingen en foutmeldingen zijn Nederlands.
 
 | Tabel | Inhoud |
 |---|---|
