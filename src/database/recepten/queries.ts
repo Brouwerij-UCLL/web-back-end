@@ -120,18 +120,22 @@ export function getRecept(id: number): Recipe | undefined {
       )),
       'extras', json((
         SELECT json_group_array(json_object(
-          'extra_ingredient_id', extra_ingredients.extra_ingredient_id,
-          'name', extra_ingredients.name,
-          'description', extra_ingredients.description,
-          'amount', recipe_extras.amount,
-          'unit', extra_ingredients.unit,
-          'add_moment', recipe_extras.add_moment,
-          'boil_time_min', recipe_extras.boil_time
+          'extra_ingredient_id', extras.extra_ingredient_id,
+          'name', extras.name,
+          'description', extras.description,
+          'amount', extras.amount,
+          'unit', extras.unit,
+          'add_moment', extras.add_moment,
+          'boil_time_min', extras.boil_time
         ))
-        FROM recipe_extras
-        JOIN extra_ingredients
-          ON extra_ingredients.extra_ingredient_id = recipe_extras.extra_ingredient_id
-        WHERE recipe_extras.recipe_id = recipes.recipe_id
+        FROM (
+          SELECT recipe_extras.*, extra_ingredients.name, extra_ingredients.description, extra_ingredients.unit
+          FROM recipe_extras
+          JOIN extra_ingredients
+            ON extra_ingredients.extra_ingredient_id = recipe_extras.extra_ingredient_id
+          WHERE recipe_extras.recipe_id = recipes.recipe_id
+          ORDER BY recipe_extras.add_moment, recipe_extras.boil_time DESC -- eerst beslag, dan koken van lang naar kort
+        ) extras
       )),
       'mash_schedule', json_object(
         'steps', json((

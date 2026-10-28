@@ -99,15 +99,42 @@ const hopAddition = z.object({
   boil_time_min: z.number().int().meta({ description: 'Hoe lang de hop meekookt, in minuten' }),
 });
 
-const recipeExtra = z.object({
-  extra_ingredient_id: z.number().int().meta({ description: 'Id van het extra ingrediënt in de catalogus' }),
-  name: z.string(),
-  description: z.string().nullable(),
-  amount: z.number(),
-  unit: z.string(),
-  add_moment: z.enum(['beslag', 'koken']),
-  boil_time_min: z.number().int().nullable().meta({ description: 'Alleen bij add_moment "koken"' }),
-});
+const corianderExtra = {
+  extra_ingredient_id: 1,
+  name: 'Gedroogde Koriander (Coriander)',
+  description: 'Licht geplet voor citrus/kruidig aroma',
+  amount: 10,
+  unit: 'g',
+  add_moment: 'koken',
+  boil_time_min: 5,
+};
+
+export const RecipeExtra = z
+  .object({
+    extra_ingredient_id: z.number().int().meta({ description: 'Id van het extra ingrediënt in de catalogus' }),
+    name: z.string(),
+    description: z.string().nullable(),
+    amount: z.number(),
+    unit: z.string(),
+    add_moment: z.enum(['beslag', 'koken']),
+    boil_time_min: z.number().int().nullable().meta({ description: 'Alleen bij add_moment "koken"' }),
+  })
+  .meta({ example: corianderExtra });
+
+export const RecipeExtraList = z
+  .array(RecipeExtra)
+  .meta({ example: [
+    {
+      extra_ingredient_id: 9,
+      name: 'Kersenpuree (Kriek)',
+      description: 'Fruit toevoeging voor secundaire vergisting',
+      amount: 1000,
+      unit: 'g',
+      add_moment: 'beslag',
+      boil_time_min: null,
+    },
+    corianderExtra,
+  ] });
 
 export const Recipe = z
   .object({
@@ -117,7 +144,7 @@ export const Recipe = z
     water: z.object({ mash_water_l: z.number(), sparge_water_l: z.number() }).nullable(),
     ingredients: z.array(RecipeIngredient),
     hops: z.array(hopAddition),
-    extras: z.array(recipeExtra),
+    extras: z.array(RecipeExtra),
     mash_schedule: z.object({
       steps: z.array(z.object({ step_nr: z.number().int(), temperature_c: z.number(), duration_min: z.number().int() })),
     }),
@@ -126,6 +153,33 @@ export const Recipe = z
     }),
   })
   .meta({ example: tripel });
+
+// ----- Hopgiften van een recept: /api/recipes/{id}/hops (SCRUM-52) -----
+// De invoer (HopAdditionInput) staat verder, bij de invoer van het volledige recept.
+
+const saazGift = {
+  id: 7,
+  hop_id: 3,
+  name: 'Saaz',
+  alpha_acid_percentage: 3.5,
+  type: 1,
+  origin: 'Czech Republic',
+  amount_g: 45,
+  boil_time_min: 60,
+};
+
+export const HopAdditionParams = z
+  .object({
+    id: z.coerce.number().int().positive().meta({ description: 'Id van het recept', example: 2 }),
+    hopAdditionId: z.coerce.number().int().positive().meta({ description: 'Id van de hopgift', example: 4 }),
+  })
+  .meta({ example: { id: 2, hopAdditionId: 4 } });
+
+export const HopAdditionResponse = hopAddition.meta({ example: saazGift });
+
+export const HopAdditionList = z
+  .array(hopAddition)
+  .meta({ example: [saazGift, { ...saazGift, id: 8, amount_g: 20, boil_time_min: 10 }] });
 
 // ----- Invoer voor POST /api/recipes en PUT /api/recipes/{id} (SCRUM-56) -----
 
@@ -153,22 +207,39 @@ const hopInput = z
   })
   .strict();
 
+// Eén hopgift voor POST /api/recipes/{id}/hops en PUT /api/recipes/{id}/hops/{hopAdditionId}.
+export const HopAdditionInput = hopInput.meta({ example: { hop_id: 3, amount_g: 45, boil_time_min: 60 } });
+// Hoeveelheid, toevoegmoment en kooktijd van een extra ingrediënt; gedeeld door het volledige recept en /extras.
+const extraFields = {
+  amount: z.number().positive('hoeveelheid moet groter zijn dan 0'),
+  add_moment: z.enum(['beslag', 'koken']),
+  boil_time_min: z
+    .number()
+    .int()
+    .min(0, 'kooktijd mag niet negatief zijn')
+    .max(180, 'kooktijd mag maximaal 180 minuten zijn')
+    .nullable()
+    .optional()
+    .transform((waarde) => waarde ?? null)
+    .meta({ description: 'Verplicht bij add_moment "koken", weglaten of null bij "beslag"' }),
+};
+
+function checkBoilTime(regel: { add_moment: 'beslag' | 'koken'; boil_time_min: number | null }, ctx: z.RefinementCtx) {
+  if (regel.add_moment === 'koken' && regel.boil_time_min === null) {
+    ctx.addIssue({ code: 'custom', path: ['boil_time_min'], message: 'kooktijd is verplicht bij add_moment "koken"' });
+  }
+  if (regel.add_moment === 'beslag' && regel.boil_time_min !== null) {
+    ctx.addIssue({ code: 'custom', path: ['boil_time_min'], message: 'een kooktijd hoort alleen bij add_moment "koken"' });
+  }
+}
+
 const extraInput = z
   .object({
     extra_ingredient_id: z.number().int().positive().meta({ description: 'Id van het extra ingrediënt in de catalogus' }),
-    amount: z.number().positive('hoeveelheid moet groter zijn dan 0'),
-    add_moment: z.enum(['beslag', 'koken']),
-    boil_time_min: z.number().int().min(0).max(180).nullable().optional().transform((waarde) => waarde ?? null),
+    ...extraFields,
   })
   .strict()
-  .superRefine((regel, ctx) => {
-    if (regel.add_moment === 'koken' && regel.boil_time_min === null) {
-      ctx.addIssue({ code: 'custom', path: ['boil_time_min'], message: 'kooktijd is verplicht bij add_moment "koken"' });
-    }
-    if (regel.add_moment === 'beslag' && regel.boil_time_min !== null) {
-      ctx.addIssue({ code: 'custom', path: ['boil_time_min'], message: 'een kooktijd hoort alleen bij add_moment "koken"' });
-    }
-  });
+  .superRefine(checkBoilTime);
 
 const mashStepInput = z
   .object({
@@ -244,6 +315,29 @@ export const RecipeInput = z
   })
   .meta({ example: recipeInputExample });
 
+// ----- Extra ingrediënten van een recept: /api/recipes/{id}/extras (SCRUM-53) -----
+
+export const RecipeExtraParams = z
+  .object({
+    id: z.coerce.number().int().positive().meta({ description: 'Id van het recept', example: 2 }),
+    extraIngredientId: z.coerce
+      .number()
+      .int()
+      .positive()
+      .meta({ description: 'Id van het extra ingrediënt in de catalogus', example: 2 }),
+  })
+  .meta({ example: { id: 2, extraIngredientId: 2 } });
+
+export const RecipeExtraInput = extraInput.meta({
+  example: { extra_ingredient_id: 1, amount: 10, add_moment: 'koken', boil_time_min: 5 },
+});
+
+export const RecipeExtraUpdate = z
+  .object(extraFields)
+  .strict()
+  .superRefine(checkBoilTime)
+  .meta({ example: { amount: 1000, add_moment: 'beslag', boil_time_min: null } });
+
 // Maischschema: de maischstappen, met de veldnamen van het datamodel.
 // De foutmeldingen noemen de stap (vanaf 1) en het veld.
 
@@ -308,3 +402,82 @@ export const MashSchedule = z
     ),
   })
   .meta({ example: mashScheduleExample });
+
+// Water van een recept: dezelfde veldnamen als water in GET /api/recipes/{id}.
+
+const waterExample = { mash_water_l: 18.5, sparge_water_l: 12 };
+
+export const WaterInput = z
+  .object({
+    mash_water_l: z
+      .number({ error: 'mash_water_l ontbreekt of is geen getal' })
+      .positive({ error: 'mash_water_l moet groter zijn dan 0 liter' })
+      .max(500, { error: 'mash_water_l mag maximaal 500 liter zijn' })
+      .meta({ description: 'Maischwater in liter, groter dan 0' }),
+    sparge_water_l: z
+      .number({ error: 'sparge_water_l ontbreekt of is geen getal' })
+      .min(0, { error: 'sparge_water_l mag niet negatief zijn' })
+      .max(500, { error: 'sparge_water_l mag maximaal 500 liter zijn' })
+      .meta({ description: 'Spoelwater in liter; 0 als er niet gespoeld wordt' }),
+  })
+  .strict()
+  .meta({ example: waterExample });
+
+export const Water = z
+  .object({
+    recipe_id: z.number().int(),
+    mash_water_l: z.number().nullable().meta({ description: 'Maischwater in liter; null als het nog niet ingesteld is' }),
+    sparge_water_l: z.number().nullable().meta({ description: 'Spoelwater in liter; null als het nog niet ingesteld is' }),
+  })
+  .meta({ example: { recipe_id: 2, ...waterExample } });
+// Vergistingsschema: dezelfde veldnamen als fermentation_schedule in GET /api/recipes/{id}.
+// De foutmeldingen noemen de stap (vanaf 1) en het veld.
+
+const fermentationScheduleInputExample = {
+  steps: [
+    { temperature_c: 18, duration_days: 5 },
+    { temperature_c: 20, duration_days: 3 },
+    { temperature_c: 22, duration_days: 2 },
+  ],
+};
+
+const fermentationScheduleExample = {
+  recipe_id: 2,
+  steps: fermentationScheduleInputExample.steps.map((step, i) => ({ step_nr: i + 1, ...step })),
+};
+
+const FermentationStepInput = z.object({
+  temperature_c: z
+    .number({ error: stepError('temperature_c ontbreekt of is geen getal') })
+    .min(0, { error: stepError('temperature_c moet tussen 0 en 30 °C liggen') })
+    .max(30, { error: stepError('temperature_c moet tussen 0 en 30 °C liggen') })
+    .meta({ description: 'Temperatuur in °C, van 0 tot en met 30' }),
+  duration_days: z
+    .number({ error: stepError('duration_days ontbreekt of is geen getal') })
+    .int({ error: stepError('duration_days moet een geheel aantal dagen zijn') })
+    .min(1, { error: stepError('duration_days moet tussen 1 en 90 dagen liggen') })
+    .max(90, { error: stepError('duration_days moet tussen 1 en 90 dagen liggen') })
+    .meta({ description: 'Duur in dagen, van 1 tot en met 90' }),
+});
+
+export const FermentationScheduleInput = z
+  .object({
+    steps: z
+      .array(FermentationStepInput, { error: 'steps moet een lijst zijn' })
+      .min(1, { error: 'steps moet minstens één stap bevatten' })
+      .meta({ description: 'De vergistingsstappen in uitvoeringsvolgorde; de back-end nummert ze vanaf 1 (step_nr)' }),
+  })
+  .meta({ example: fermentationScheduleInputExample });
+
+export const FermentationSchedule = z
+  .object({
+    recipe_id: z.number().int(),
+    steps: z.array(
+      z.object({
+        step_nr: z.number().int().meta({ description: 'Volgnummer, vanaf 1' }),
+        temperature_c: z.number().meta({ description: 'Temperatuur in °C' }),
+        duration_days: z.number().int().meta({ description: 'Duur in dagen' }),
+      }),
+    ),
+  })
+  .meta({ example: fermentationScheduleExample });
