@@ -158,11 +158,10 @@ export const ReceptMetIngredienten = z
   .object(receptDetailsVelden)
   .meta({ example: tripelDetails });
 
-// Maischschema: steps + boil_time, met de veldnamen van het datamodel.
+// Maischschema: de maischstappen, met de veldnamen van het datamodel.
 // De foutmeldingen noemen de stap (vanaf 1) en het veld.
 
 const mashScheduleInputExample = {
-  boil_time: 60,
   steps: [
     { temperature: 63, duration: 45 },
     { temperature: 72, duration: 20 },
@@ -172,7 +171,6 @@ const mashScheduleInputExample = {
 // Het antwoord is de invoer plus recipe_id en step_nr; zo staat elke waarde maar één keer hier.
 const mashScheduleExample = {
   recipe_id: 2,
-  boil_time: mashScheduleInputExample.boil_time,
   steps: mashScheduleInputExample.steps.map((step, i) => ({ step_nr: i + 1, ...step })),
 };
 
@@ -183,10 +181,6 @@ function stepError(text: string) {
     const step = index === undefined ? 'stap' : `stap ${index + 1}`;
     return `${step}: ${text}${received(issue.input)}`;
   };
-}
-
-function boilTimeError(text: string) {
-  return (issue: { input?: unknown }) => `${text}${received(issue.input)}`;
 }
 
 function received(input: unknown): string {
@@ -209,12 +203,6 @@ const MashStepInput = z.object({
 
 export const MashScheduleInput = z
   .object({
-    boil_time: z
-      .number({ error: boilTimeError('ontbreekt of is geen getal') })
-      .int({ error: boilTimeError('moet een geheel aantal minuten zijn') })
-      .min(1, { error: boilTimeError('moet tussen 1 en 180 minuten liggen') })
-      .max(180, { error: boilTimeError('moet tussen 1 en 180 minuten liggen') })
-      .meta({ description: 'Kooktijd in minuten, van 1 tot en met 180' }),
     steps: z
       .array(MashStepInput, { error: 'steps moet een lijst zijn' })
       .min(1, { error: 'steps moet minstens één stap bevatten' })
@@ -225,11 +213,6 @@ export const MashScheduleInput = z
 export const MashSchedule = z
   .object({
     recipe_id: z.number().int(),
-    boil_time: z
-      .number()
-      .int()
-      .nullable()
-      .meta({ description: 'Kooktijd in minuten; null als er nog geen is ingesteld. Opgeslagen als laatste maischstap op 100 °C' }),
     steps: z.array(
       z.object({
         step_nr: z.number().int().meta({ description: 'Volgnummer, vanaf 1' }),

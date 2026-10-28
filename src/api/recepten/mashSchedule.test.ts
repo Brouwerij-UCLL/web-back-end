@@ -26,7 +26,6 @@ after(() => {
 type ApiResponse = { status: number; body: any };
 
 const validSchedule = {
-  boil_time: 60,
   steps: [
     { temperature: 63, duration: 45 },
     { temperature: 72, duration: 20 },
@@ -69,19 +68,18 @@ beforeEach(() => {
 
 describe('AC0: maischschema opslaan', () => {
   test('PUT slaat het schema op bij het recept en antwoordt met 200 en het opgeslagen schema', async () => {
-    const response = await put(1, { boil_time: 75, steps: [{ temperature: 66, duration: 60 }] });
+    const response = await put(1, { steps: [{ temperature: 66, duration: 60 }] });
 
     assert.equal(response.status, 200);
     assert.deepEqual(response.body, {
       recipe_id: 1,
-      boil_time: 75,
       steps: [{ step_nr: 1, temperature: 66, duration: 60 }],
     });
     assert.deepEqual(getMashSchedule(1), response.body);
   });
 
   test('een schema zonder stappen wordt geweigerd', async () => {
-    assert.match(errorMessage(await put(1, { boil_time: 60, steps: [] }), 400), /minstens één stap/);
+    assert.match(errorMessage(await put(1, { steps: [] }), 400), /minstens één stap/);
   });
 });
 
@@ -93,12 +91,11 @@ describe('AC1: maischschema opvragen', () => {
       { temperature: 72, duration: 20 },
       { temperature: 78, duration: 5 },
     ];
-    await put(1, { boil_time: 90, steps });
+    await put(1, { steps });
 
     const response = await get(1);
 
     assert.equal(response.status, 200);
-    assert.equal(response.body.boil_time, 90);
     assert.deepEqual(
       response.body.steps,
       steps.map((step, i) => ({ step_nr: i + 1, ...step })),
@@ -111,7 +108,6 @@ describe('AC1: maischschema opvragen', () => {
     assert.equal(response.status, 200);
     assert.deepEqual(response.body, {
       recipe_id: 2,
-      boil_time: null,
       steps: [
         { step_nr: 1, temperature: 62, duration: 40 },
         { step_nr: 2, temperature: 72, duration: 20 },
@@ -124,7 +120,6 @@ describe('AC1: maischschema opvragen', () => {
 describe('AC2: bestaand schema vervangen', () => {
   test('het nieuwe schema vervangt het oude volledig, zonder achtergebleven stappen', async () => {
     await put(1, {
-      boil_time: 60,
       steps: [
         { temperature: 50, duration: 10 },
         { temperature: 62, duration: 30 },
@@ -132,27 +127,16 @@ describe('AC2: bestaand schema vervangen', () => {
       ],
     });
 
-    await put(1, { boil_time: 45, steps: [{ temperature: 67, duration: 60 }] });
+    await put(1, { steps: [{ temperature: 67, duration: 60 }] });
 
     assert.deepEqual(mashStepRows(1), [
       { step_nr: 1, temperature: 67, duration: 60 },
-      { step_nr: 2, temperature: 100, duration: 45 }, // kookstap: duration = kooktijd
-    ]);
-  });
-
-  test('de kooktijd wordt opgeslagen als laatste stap op 100 °C, met duration = kooktijd', async () => {
-    await put(1, validSchedule);
-
-    assert.deepEqual(mashStepRows(1), [
-      { step_nr: 1, temperature: 63, duration: 45 },
-      { step_nr: 2, temperature: 72, duration: 20 },
-      { step_nr: 3, temperature: 100, duration: 60 },
     ]);
   });
 
   test('het schema van een ander recept wordt niet aangeraakt', async () => {
     const previous = getMashSchedule(3);
-    await put(1, { boil_time: 45, steps: [{ temperature: 67, duration: 60 }] });
+    await put(1, { steps: [{ temperature: 67, duration: 60 }] });
     assert.deepEqual(getMashSchedule(3), previous);
   });
 });
@@ -162,7 +146,6 @@ describe('AC3: alles of niets', () => {
     const previous = getMashSchedule(1);
 
     const response = await put(1, {
-      boil_time: 90,
       steps: [
         { temperature: 50, duration: 10 },
         { temperature: 66, duration: 60 },
@@ -177,7 +160,6 @@ describe('AC3: alles of niets', () => {
   test('een databasefout halverwege het vervangen wordt volledig teruggedraaid', () => {
     const previous = getMashSchedule(1);
     const secondStepFails = {
-      boil_time: 90,
       steps: [
         { temperature: 50, duration: 10 },
         { temperature: null as unknown as number, duration: 10 },
@@ -202,7 +184,7 @@ describe('AC4: temperatuur of duur buiten de grenzen', () => {
       const previous = getMashSchedule(1);
       const step2 = { temperature: 72, duration: 20, [field]: value };
 
-      const response = await put(1, { boil_time: 60, steps: [{ temperature: 63, duration: 45 }, step2] });
+      const response = await put(1, { steps: [{ temperature: 63, duration: 45 }, step2] });
 
       const message = errorMessage(response, 400);
       assert.match(message, new RegExp(`steps\\.1\\.${field}: stap 2: ${field}`));
@@ -213,38 +195,12 @@ describe('AC4: temperatuur of duur buiten de grenzen', () => {
 
   test('de grenswaarden zelf zijn toegelaten', async () => {
     const response = await put(1, {
-      boil_time: 60,
       steps: [
         { temperature: 20, duration: 1 },
         { temperature: 80, duration: 240 },
       ],
     });
     assert.equal(response.status, 200);
-  });
-});
-
-describe('AC5: kooktijd ontbreekt of valt buiten 1–180 minuten', () => {
-  for (const [description, boilTime] of [
-    ['ontbreekt', undefined],
-    ['is 0', 0],
-    ['is 181', 181],
-  ] as const) {
-    test(`kooktijd ${description} geeft 400 en er wordt niets opgeslagen`, async () => {
-      const previous = getMashSchedule(1);
-
-      const response = await put(1, { boil_time: boilTime, steps: [{ temperature: 66, duration: 60 }] });
-
-      assert.match(errorMessage(response, 400), /boil_time/);
-      assert.deepEqual(getMashSchedule(1), previous);
-    });
-  }
-
-  test('de grenswaarden 1 en 180 zijn toegelaten', async () => {
-    for (const boilTime of [1, 180]) {
-      const response = await put(1, { boil_time: boilTime, steps: [{ temperature: 66, duration: 60 }] });
-      assert.equal(response.status, 200);
-      assert.equal(response.body.boil_time, boilTime);
-    }
   });
 });
 
