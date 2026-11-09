@@ -75,7 +75,60 @@ const summaryFields = {
 
 export const RecipeSummary = z.object(summaryFields).meta({ example: tripelSummary });
 
-export const RecipeList = z.array(RecipeSummary).meta({ example: [tripelSummary] });
+const recipeListItemExample = {
+  id: 2,
+  name: 'Gouden Tripel',
+  beer_style: 'Belgische Tripel',
+  description: 'Klassieke krachtige blondine met fruitige esters.',
+  basis_volume_liter: 20,
+  created_at: '2026-10-14 12:38:49',
+  updated_at: '2026-10-14 12:38:49',
+};
+
+export const RecipeListItem = z.object({
+  id: z.number().int().meta({ description: 'Uniek id van het recept' }),
+  name: z.string().meta({ description: 'Naam van het recept' }),
+  beer_style: z.string().nullable().meta({ description: 'Bierstijl van het recept' }),
+  description: z.string().nullable().meta({ description: 'Beschrijving van het recept' }),
+  basis_volume_liter: z.number().meta({ description: 'Basisvolume van het recept in liter' }),
+  created_at: z.string().meta({ description: 'Tijdstip waarop het recept is aangemaakt' }),
+  updated_at: z.string().meta({ description: 'Tijdstip waarop het recept voor het laatst is gewijzigd' }),
+}).meta({ example: recipeListItemExample });
+
+export const RecipeList = z.array(RecipeListItem).meta({ example: [recipeListItemExample] });
+
+export const RecipeQuery = z.object({
+  search: z.string().trim().max(100, 'search mag maximaal 100 tekens lang zijn').optional()
+    .transform((waarde) => waarde || undefined)
+    .meta({ description: 'Toon alleen recepten waarvan de naam deze tekst bevat (hoofdletters niet meegerekend)', example: 'tripel' }),
+  beer_style: z.string().trim().max(50, 'beer_style mag maximaal 50 tekens lang zijn').optional()
+    .transform((waarde) => waarde || undefined)
+    .meta({ description: 'Toon alleen recepten met deze bierstijl', example: 'Belgische Tripel' }),
+  sort: z.enum(['name', 'created_at', 'updated_at']).optional()
+    .meta({ description: 'Veld waarop gesorteerd wordt (standaard: name)', example: 'name' }),
+  direction: z.enum(['asc', 'desc']).optional()
+    .meta({ description: 'Sorteerrichting: oplopend (asc) of aflopend (desc); standaard: asc', example: 'asc' }),
+}).strict().meta({ example: { search: 'tripel', sort: 'name', direction: 'asc' } });
+
+export const RecipeUpdate = z.object({
+  name: z.string().trim().min(1, 'naam is verplicht').max(100, 'naam mag maximaal 100 tekens lang zijn')
+    .meta({ description: 'Naam van het recept' }),
+  beer_style: z.string().trim().max(50, 'bierstijl mag maximaal 50 tekens lang zijn').nullable()
+    .meta({ description: 'Bierstijl van het recept, of null' }),
+  description: z.string().trim().max(1000, 'beschrijving mag maximaal 1000 tekens lang zijn').nullable()
+    .meta({ description: 'Beschrijving van het recept, of null' }),
+  basis_volume_liter: z.number({ error: 'basis_volume_liter moet een getal zijn' })
+    .positive('basis_volume_liter moet groter zijn dan 0')
+    .max(500, 'basis_volume_liter mag maximaal 500 liter zijn')
+    .meta({ description: 'Basisvolume van het recept in liter' }),
+}).strict().meta({
+  example: {
+    name: 'Gouden Tripel',
+    beer_style: 'Belgische Tripel',
+    description: 'Klassieke krachtige blondine met fruitige esters.',
+    basis_volume_liter: 20,
+  },
+});
 
 export const RecipeIngredient = z
   .object({

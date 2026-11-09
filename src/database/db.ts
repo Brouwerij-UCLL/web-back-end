@@ -8,6 +8,7 @@ const file = config.databaseFile;
 mkdirSync(dirname(file), { recursive: true });
 
 export const db = new DatabaseSync(file);
+db.exec('PRAGMA foreign_keys = ON');
 
 // Controleert of de database bereikbaar is (werkt ook met een lege database).
 export function checkDatabaseConnection(): void {

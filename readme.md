@@ -128,17 +128,20 @@ Controleer de verbinding via [http://localhost:3000/health/db](http://localhost:
 
 ### Datamodel recepten
 
-Sinds migratie 003 gebruikt de database Engelse tabel- en kolomnamen. De API gebruikt ook Engelse veldnamen, dicht bij die kolommen (bv. `beer_style`, `amount_g`, `mash_schedule.steps[].temperature_c`); beschrijvingen en foutmeldingen zijn Nederlands.
+Sinds migratie 003 gebruikt de database Engelse tabel- en kolomnamen. De API gebruikt Engelse veldnamen, dicht bij die kolommen (bv. `beer_style`, `amount_g`, `mash_schedule.steps[].temperature_c`); beschrijvingen en foutmeldingen zijn Nederlands.
 
 | Tabel | Inhoud |
 |---|---|
-| `recipes` | naam, bierstijl, beschrijving, aanmaak- en wijzigingstijd |
+| `recipes` | naam, bierstijl, beschrijving, basisvolume, aanmaak- en wijzigingstijd |
 | `ingredients`, `hops`, `extra_ingredients` | catalogi die recepten delen (een hop of mout bestaat één keer) |
 | `recipe_ingredients` | vergistbare ingrediënten per recept, hoeveelheid in gram |
 | `hop_additions` | hopgiften per recept: hoeveelheid en kooktijd; dezelfde hop kan meerdere keren |
 | `recipe_extras` | extra ingrediënten per recept met toevoegmoment (`beslag` of `koken`) en kooktijd bij koken |
 | `recipe_water` | maisch- en spoelwater in liter |
 | `recipe_mash_steps`, `recipe_fermentation_steps` | maisch- en vergistingsstappen met temperatuur en duur |
+| `brouwsessies`, `brouwsessie_stappen` | sessiesnapshots en hun uitvoeringsstappen; verwijderen van het recept ontkoppelt de sessie maar bewaart de historie |
+
+`GET /api/recipes` supports `search`, `beer_style`, `sort` (`name`, `created_at`, `updated_at`) and `direction` (`asc`, `desc`). Update and delete recipes using `PUT` and `DELETE /api/recipes/{id}`.
 
 ## Starten
 

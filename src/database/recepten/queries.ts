@@ -9,6 +9,23 @@ export type RecipeSummary = {
   description: string | null;
 };
 
+export type RecipeListItem = {
+  id: number;
+  name: string;
+  beer_style: string | null;
+  description: string | null;
+  basis_volume_liter: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RecipeFilter = {
+  search?: string;
+  beer_style?: string;
+  sort?: 'name' | 'created_at' | 'updated_at';
+  direction?: 'asc' | 'desc';
+};
+
 export type RecipeIngredient = {
   ingredient_id: number;
   name: string;
@@ -62,13 +79,88 @@ export type Recipe = RecipeSummary & {
 };
 
 // Alle recepten voor de lijstweergave, alfabetisch op naam.
-export function getRecepten(): RecipeSummary[] {
+export function getRecipes(filter: RecipeFilter): RecipeListItem[] {
+  const sortColumns = {
+    name: 'name',
+    created_at: 'timestamp_create',
+    updated_at: 'timestamp_edit',
+  } as const;
+  const sort = sortColumns[filter.sort ?? 'name'];
+  const direction = filter.direction ?? 'asc';
+  const conditions: string[] = [];
+  const values: string[] = [];
+
+  if (filter.search) {
+    conditions.push("name LIKE '%' || ? || '%' COLLATE NOCASE");
+    values.push(filter.search);
+  }
+  if (filter.beer_style) {
+    conditions.push('beer_style = ? COLLATE NOCASE');
+    values.push(filter.beer_style);
+  }
+
   return db
     .prepare(`
-      SELECT recipe_id AS id, name, beer_style, description
+      SELECT
+        recipe_id AS id,
+        name,
+        beer_style,
+        description,
+        basis_volume_liter,
+        timestamp_create AS created_at,
+        timestamp_edit AS updated_at
       FROM recipes
-      ORDER BY name`)
-    .all() as RecipeSummary[];
+      ${conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''}
+      ORDER BY ${sort} COLLATE NOCASE ${direction.toUpperCase()}, recipe_id ASC`)
+    .all(...values) as RecipeListItem[];
+}
+
+export function getRecipeListItem(id: number): RecipeListItem | undefined {
+  return db.prepare(`
+    SELECT
+      recipe_id AS id,
+      name,
+      beer_style,
+      description,
+      basis_volume_liter,
+      timestamp_create AS created_at,
+      timestamp_edit AS updated_at
+    FROM recipes
+    WHERE recipe_id = ?
+  `).get(id) as RecipeListItem | undefined;
+}
+
+export function updateRecipeBasics(
+  id: number,
+  recipe: { name: string; beer_style: string | null; description: string | null; basis_volume_liter: number },
+): RecipeListItem | undefined {
+  const resultaat = db.prepare(`
+    UPDATE recipes
+    SET name = ?, beer_style = ?, description = ?, basis_volume_liter = ?,
+        timestamp_edit = MAX(
+          strftime('%Y-%m-%d %H:%M:%f', 'now'),
+          strftime('%Y-%m-%d %H:%M:%f', timestamp_edit, '+0.001 seconds')
+        )
+    WHERE recipe_id = ?
+  `).run(recipe.name, recipe.beer_style, recipe.description, recipe.basis_volume_liter, id);
+
+  if (resultaat.changes === 0) return undefined;
+  return getRecipeListItem(id);
+}
+
+export function deleteRecipe(id: number): 'deleted' | 'active_session' | 'not_found' {
+  const resultaat = db.prepare(`
+    DELETE FROM recipes
+    WHERE recipe_id = ?
+      AND NOT EXISTS (
+        SELECT 1 FROM brouwsessies
+        WHERE brouwsessies.recept_id = recipes.recipe_id
+          AND brouwsessies.status = 'bezig'
+      )
+  `).run(id);
+  if (resultaat.changes > 0) return 'deleted';
+  if (db.prepare('SELECT 1 FROM recipes WHERE recipe_id = ?').get(id) !== undefined) return 'active_session';
+  return 'not_found';
 }
 
 export function getRecept(id: number): Recipe | undefined {

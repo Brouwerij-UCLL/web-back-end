@@ -7,11 +7,12 @@ import { after, before, test } from 'node:test';
 process.env.DATABASE_FILE = ':memory:';
 const { app } = await import('../../app.ts');
 
-type Schema = { example?: unknown; $ref?: string };
+type Schema = { example?: unknown; $ref?: string; description?: string; items?: Schema; properties?: Record<string, Schema> };
 type MediaType = { schema: Schema };
 type Operation = {
   tags?: string[];
   summary?: string;
+  description?: string;
   parameters?: { name: string; example?: unknown; schema: Schema }[];
   requestBody?: { content: Record<string, MediaType> };
   responses: Record<string, { description: string; content?: Record<string, MediaType> }>;
@@ -95,6 +96,38 @@ test('elk endpoint is volledig gedocumenteerd', () => {
       }
     }
   }
+});
+
+test('receptbeheer is in het Nederlands beschreven en gebruikt Engelse API-velden', () => {
+  const lijst = spec.paths['/api/recipes']?.get;
+  assert.ok(lijst);
+  assert.equal(lijst.summary, 'Lijst van alle recepten');
+  assert.match(lijst.description ?? '', /basisvolume.*aanmaak- en wijzigingstijd/i);
+  const listSchema = lijst.responses['200']?.content?.['application/json']?.schema;
+  assert.deepEqual(Object.keys(listSchema?.items?.properties ?? {}), [
+    'id', 'name', 'beer_style', 'description', 'basis_volume_liter', 'created_at', 'updated_at',
+  ]);
+  assert.ok(Object.values(listSchema?.items?.properties ?? {}).every((property) => property.description));
+  assert.deepEqual(
+    lijst.parameters?.map((parameter) => parameter.name),
+    ['search', 'beer_style', 'sort', 'direction'],
+  );
+  assert.ok(lijst.parameters?.every((parameter) => /toon|veld|sorteerrichting/i.test(parameter.schema.description ?? '')));
+
+  const wijzigen = spec.paths['/api/recipes/{id}']?.put;
+  assert.ok(wijzigen);
+  assert.equal(wijzigen.summary, 'Recept wijzigen');
+  assert.match(wijzigen.description ?? '', /Ingrediënten, water en schema’s blijven ongewijzigd/);
+  const bodySchema = wijzigen.requestBody?.content['application/json']?.schema;
+  assert.ok(bodySchema?.properties);
+  assert.deepEqual(Object.keys(bodySchema.properties), ['name', 'beer_style', 'description', 'basis_volume_liter']);
+  assert.ok(Object.values(bodySchema.properties).every((property) => property.description));
+
+  const verwijderen = spec.paths['/api/recipes/{id}']?.delete;
+  assert.ok(verwijderen);
+  assert.equal(verwijderen.summary, 'Recept verwijderen');
+  assert.match(verwijderen.description ?? '', /Brouwsessies blijven bewaard/);
+  assert.match(verwijderen.responses['409']?.description ?? '', /brouwsessie loopt/);
 });
 
 test('"Try it out" met de voorbeeldwaarden geeft het gedocumenteerde antwoord', async () => {

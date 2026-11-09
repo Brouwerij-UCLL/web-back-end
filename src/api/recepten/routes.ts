@@ -1,4 +1,4 @@
-import { getRecept, getRecepten, getReceptIngredients } from '../../database/recepten/queries.ts';
+import { deleteRecipe, getRecipeListItem, getRecipes, getRecept, getReceptIngredients, updateRecipeBasics } from '../../database/recepten/queries.ts';
 import { maakRecept, ontbrekendeIds, receptBestaat, vervangRecept, type RecipeInput as RecipeInputData } from '../../database/recepten/saveRecipe.ts';
 import {
   addHopAddition,
@@ -12,7 +12,7 @@ import { getMashSchedule, replaceMashSchedule } from '../../database/recepten/ma
 import { getWater, saveWater } from '../../database/recepten/water.ts';
 import { getFermentationSchedule, replaceFermentationSchedule } from '../../database/recepten/fermentationSchedule.ts';
 import { createRoutes, HttpFout } from '../openapi/route.ts';
-import { HopAdditionInput, HopAdditionList, HopAdditionParams, HopAdditionResponse,FermentationSchedule, FermentationScheduleInput, Recipe, MashSchedule, MashScheduleInput, RecipeExtra, RecipeExtraInput, RecipeExtraList, RecipeExtraParams, RecipeExtraUpdate, RecipeIngredientList, RecipeInput, RecipeList, ReceptIdParams, Water, WaterInput } from './schemas.ts';
+import { HopAdditionInput, HopAdditionList, HopAdditionParams, HopAdditionResponse,FermentationSchedule, FermentationScheduleInput, Recipe, MashSchedule, MashScheduleInput, RecipeExtra, RecipeExtraInput, RecipeExtraList, RecipeExtraParams, RecipeExtraUpdate, RecipeIngredientList, RecipeInput, RecipeList, RecipeListItem, RecipeQuery, RecipeUpdate, ReceptIdParams, Water, WaterInput } from './schemas.ts';
 
 export const recepten = createRoutes('/api/recipes', 'recipes');
 
@@ -22,10 +22,52 @@ recepten.route({
   method: 'get',
   path: '/',
   summary: 'Lijst van alle recepten',
-  description: 'Alle recepten met hun algemene gegevens, alfabetisch op naam.',
+  description: 'Alle recepten met hun basisvolume en aanmaak- en wijzigingstijd. Met `search` zoek je op een deel van de naam en met `beer_style` filter je op bierstijl. Standaard alfabetisch gesorteerd op naam; met `sort` en `direction` pas je de sortering aan.',
+  query: RecipeQuery,
   response: RecipeList,
   responseDescription: 'De recepten',
-  handler: () => getRecepten(),
+  handler: ({ query }) => getRecipes(query),
+});
+
+recepten.route({
+  method: 'put',
+  path: '/:id',
+  summary: 'Recept wijzigen',
+  description: 'Vervangt de naam, bierstijl, beschrijving en het basisvolume van het recept. Ingrediënten, water en schema’s blijven ongewijzigd.',
+  params: ReceptIdParams,
+  body: RecipeUpdate,
+  response: RecipeListItem,
+  responseDescription: 'Het gewijzigde recept',
+  errors: { 404: nietGevonden },
+  handler: ({ params, body }) => {
+    if (!receptBestaat(params.id)) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    const recipe = updateRecipeBasics(params.id, body);
+    if (!recipe) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    return recipe;
+  },
+});
+
+recepten.route({
+  method: 'delete',
+  path: '/:id',
+  summary: 'Recept verwijderen',
+  description: 'Verwijdert ook de ingrediënten, het water en de schema’s van het recept. Brouwsessies blijven bewaard; zolang er een brouwsessie loopt, kan het recept niet worden verwijderd.',
+  params: ReceptIdParams,
+  status: 204,
+  response: RecipeListItem,
+  responseDescription: 'Het recept is verwijderd',
+  errors: {
+    404: nietGevonden,
+    409: 'Het recept kan niet worden verwijderd zolang er een brouwsessie loopt',
+  },
+  handler: ({ params }) => {
+    const recipe = getRecipeListItem(params.id);
+    if (!recipe) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    const result = deleteRecipe(params.id);
+    if (result === 'active_session') throw new HttpFout(409, `recept ${params.id} kan niet worden verwijderd zolang er een brouwsessie loopt`);
+    if (result === 'not_found') throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    return recipe;
+  },
 });
 
 recepten.route({
