@@ -230,7 +230,7 @@ const extraInput = z
 
 const mashStepInput = z
   .object({
-    temperature_c: z.number().min(20, 'temperatuur moet tussen 20 en 80 °C liggen').max(80, 'temperatuur moet tussen 20 en 80 °C liggen'),
+    temperature_c: z.number().min(20, 'temperatuur moet tussen 20 en 80 °C liggen').max(120, 'temperatuur moet tussen 20 en 80 °C liggen'),
     duration_min: z.number().int().min(1, 'duur moet tussen 1 en 240 minuten liggen').max(240, 'duur moet tussen 1 en 240 minuten liggen'),
   })
   .strict();
