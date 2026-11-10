@@ -445,3 +445,51 @@ export const FermentationSchedule = z
     ),
   })
   .meta({ example: fermentationScheduleExample });
+
+// ----- Vergistbare ingrediënten (moutstort) van een recept -----
+// Naam en fabrikant komen uit de catalogus (ingredients); de hoeveelheid staat per recept, in kilogram.
+
+const pilsnerMaltKg = { ingredient_id: 1, name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_kg: 5.5 };
+
+export const FermentableParams = z
+  .object({
+    id: z.coerce.number().int().positive().meta({ description: 'Id van het recept', example: 2 }),
+    ingredientId: z.coerce.number().int().positive().meta({ description: 'Id van het ingrediënt in de catalogus', example: 1 }),
+  })
+  .meta({ example: { id: 2, ingredientId: 1 } });
+
+export const FermentableInput = z
+  .object({
+    name: z
+      .string({ error: 'naam is verplicht' })
+      .trim()
+      .min(1, 'naam is verplicht')
+      .max(100, 'naam mag maximaal 100 tekens lang zijn'),
+    manufacturer: z
+      .string()
+      .trim()
+      .max(100, 'fabrikant mag maximaal 100 tekens lang zijn')
+      .nullable()
+      .optional()
+      .transform((waarde) => (waarde ? waarde : null)),
+    amount_kg: z
+      .number({ error: 'hoeveelheid moet een getal zijn' })
+      .positive('hoeveelheid moet groter zijn dan 0 kg')
+      .max(100, 'hoeveelheid mag maximaal 100 kg zijn')
+      .meta({ description: 'Hoeveelheid in kilogram' }),
+  })
+  .strict()
+  .meta({ example: { name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_kg: 5.5 } });
+
+export const Fermentable = z
+  .object({
+    ingredient_id: z.number().int().meta({ description: 'Id in de catalogus (GET /api/ingredients)' }),
+    name: z.string(),
+    manufacturer: z.string().nullable(),
+    amount_kg: z.number().meta({ description: 'Hoeveelheid in kilogram' }),
+  })
+  .meta({ example: pilsnerMaltKg });
+
+export const FermentableList = z
+  .array(Fermentable)
+  .meta({ example: [pilsnerMaltKg, { ingredient_id: 3, name: 'Wheat Malt (Tarwemout)', manufacturer: 'Dingemans', amount_kg: 0.8 }] });
