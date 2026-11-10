@@ -62,12 +62,14 @@ export type Recipe = RecipeSummary & {
 };
 
 // Alle recepten voor de lijstweergave, alfabetisch op naam.
-export function getRecepten(): RecipeSummary[] {
+// Alle recepten op naam: 'asc' = A tot Z (standaard), 'desc' = Z tot A.
+export function getRecepten(orderBy: 'asc' | 'desc' = 'asc'): RecipeSummary[] {
+  const richting = orderBy === 'desc' ? 'DESC' : 'ASC';
   return db
     .prepare(`
       SELECT recipe_id AS id, name, beer_style, description
       FROM recipes
-      ORDER BY name`)
+      ORDER BY name COLLATE NOCASE ${richting}`)
     .all() as RecipeSummary[];
 }
 

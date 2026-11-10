@@ -64,6 +64,15 @@ export const ReceptIdParams = z
   })
   .meta({ example: { id: 2 } });
 
+export const RecipesQuery = z
+  .object({
+    orderBy: z
+      .enum(['asc', 'desc'], { error: 'orderBy moet asc of desc zijn' })
+      .default('asc')
+      .meta({ description: 'Volgorde op naam: asc = A tot Z (standaard), desc = Z tot A', example: 'desc' }),
+  })
+  .meta({ example: { orderBy: 'desc' } });
+
 // ----- Antwoorden -----
 
 const summaryFields = {

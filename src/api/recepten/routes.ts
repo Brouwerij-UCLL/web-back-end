@@ -24,6 +24,7 @@ import {
   RecipeIngredientList,
   RecipeInput,
   RecipeList,
+  RecipesQuery,
   ReceptIdParams,
   Water,
   WaterInput,
@@ -37,10 +38,11 @@ recepten.route({
   method: 'get',
   path: '/',
   summary: 'Lijst van alle recepten',
-  description: 'Alle recepten met hun algemene gegevens, alfabetisch op naam.',
+  description: 'Alle recepten met hun algemene gegevens, alfabetisch op naam. Met `orderBy=desc` in omgekeerde volgorde (Z tot A).',
+  query: RecipesQuery,
   response: RecipeList,
   responseDescription: 'De recepten',
-  handler: () => getRecepten(),
+  handler: ({ query }) => getRecepten(query.orderBy),
 });
 
 recepten.route({
