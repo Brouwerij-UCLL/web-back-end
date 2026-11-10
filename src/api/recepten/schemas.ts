@@ -335,7 +335,7 @@ const MashStepInput = z.object({
   temperature: z
     .number({ error: stepError('temperature ontbreekt of is geen getal') })
     .min(20, { error: stepError('temperature moet tussen 20 en 80 °C liggen') })
-    .max(80, { error: stepError('temperature moet tussen 20 en 80 °C liggen') })
+    .max(120, { error: stepError('temperature moet tussen 20 en 80 °C liggen') })
     .meta({ description: 'Temperatuur in °C, van 20 tot en met 80' }),
   duration: z
     .number({ error: stepError('duration ontbreekt of is geen getal') })
