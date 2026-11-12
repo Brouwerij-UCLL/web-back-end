@@ -8,7 +8,13 @@ const defaultCorsOrigins = 'http://localhost:4200,http://localhost,https://local
 export const config = {
   port: Number(process.env.PORT ?? 3000),
   databaseFile: process.env.DATABASE_FILE ?? defaultDatabaseFile,
-  mqttUrl: process.env.MQTT_URL ?? 'mqtt://broker.emqx.io:1883',
+  // Eigen MQTT-broker in de back-end; MQTT_BROKER=off om een externe broker te gebruiken (via MQTT_URL).
+  mqttBroker: process.env.MQTT_BROKER !== 'off',
+  mqttPort: Number(process.env.MQTT_PORT ?? 1883),
+  // Leeg = iedereen mag verbinden; ingevuld = elke client (ook de back-end zelf) moet inloggen.
+  mqttUsername: process.env.MQTT_USERNAME || undefined,
+  mqttPassword: process.env.MQTT_PASSWORD || undefined,
+  mqttUrl: process.env.MQTT_URL ?? `mqtt://localhost:${Number(process.env.MQTT_PORT ?? 1883)}`,
   // Kommagescheiden lijst; een afsluitende / wordt genegeerd.
   corsOrigins: (process.env.CORS_ORIGINS ?? defaultCorsOrigins)
     .split(',')
