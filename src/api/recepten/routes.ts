@@ -22,7 +22,7 @@ recepten.route({
   method: 'get',
   path: '/',
   summary: 'Lijst van alle recepten',
-  description: 'Alle recepten met hun basisvolume en aanmaak- en wijzigingstijd. Met `search` zoek je op een deel van de naam en met `beer_style` filter je op bierstijl. Standaard alfabetisch gesorteerd op naam; met `sort` en `direction` pas je de sortering aan.',
+  description: 'Alle recepten met hun basisvolume en aanmaak- en wijzigingstijd. Met `?search=` zoek je op een deel van de naam en met `?beer_style=` filter je op bierstijl. Met `?sort=` kan de lijst gesorteerd worden, standaard alfabetisch gesorteerd op naam; met `&direction=` pas je de sortering aan.',
   query: RecipeQuery,
   response: RecipeList,
   responseDescription: 'De recepten',
