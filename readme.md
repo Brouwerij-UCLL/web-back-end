@@ -49,7 +49,7 @@ migrations/         SQL-migraties (001_..., 002_...)
 src/
   server.ts         lokaal startpunt: MQTT en webserver starten
   app.ts            de Express-app: migraties, middleware en routers (startpunt op Vercel)
-  config.ts         instellingen uit .env (PORT, DATABASE_FILE, MQTT_URL, CORS_ORIGINS)
+  config.ts         instellingen uit .env (PORT, DATABASE_FILE, MQTT_*, CORS_ORIGINS)
   api/              REST-endpoints
     index.ts        lijst van alle groepen endpoints
     docs.ts         Swagger UI op /api/docs
@@ -79,6 +79,7 @@ src/
     extras/
       queries.ts    de queries op de catalogus extra_ingredients
   mqtt/             verbinding met de MQTT-broker
+    broker.ts       de eigen MQTT-broker (Aedes)
     client.ts       verbinden en abonneren
     topics.ts       de topics en het ontleden ervan
     handlers.ts     verwerken van binnenkomende berichten
@@ -120,6 +121,16 @@ recepten.route({
 - **Fouten** gooi je met `throw new HttpFout(status, 'boodschap')`. Elk foutantwoord heeft het formaat `{"fout": "..."}`.
 - **Klopt altijd:** wijkt het antwoord van een handler af van het schema, dan geeft de back-end een 500 in plaats van ongedocumenteerde data.
 - **Controle:** `npm test` controleert dat elk endpoint een beschrijving, groep, voorbeelden en het gedeelde foutschema heeft, en roept elk GET-endpoint aan met de voorbeeldwaarden.
+
+## MQTT-broker
+
+`npm start` start ook een eigen MQTT-broker (Aedes) in de back-end. Ketel en kast verbinden daarmee, niet met een publieke testbroker.
+
+- Adres voor de toestellen: het IP-adres van de computer of server waarop de back-end draait, poort `MQTT_PORT` (standaard 1883).
+- Login: vul `MQTT_USERNAME` en `MQTT_PASSWORD` in `.env` in; dan moet elke client inloggen, ook de back-end zelf. Leeg = iedereen in het netwerk mag verbinden.
+- Retained berichten, last will en QoS 0, 1 en 2 werken.
+- Een externe broker gebruiken: `MQTT_BROKER=off` en `MQTT_URL` op die broker zetten, bv. `mqtt://broker.emqx.io:1883`.
+- Op Vercel draait geen broker: de toestellen hebben een server nodig die blijft aanstaan.
 
 ## Database (SQLite)
 
