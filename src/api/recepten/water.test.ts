@@ -34,6 +34,7 @@ async function vraag(methode: string, pad: string, body?: unknown) {
 async function nieuwRecept(): Promise<number> {
   const { status, body } = await vraag('POST', '', {
     name: 'Watertest',
+    recept_volume: 20,
     mash_schedule: { steps: [{ temperature_c: 66, duration_min: 60 }] },
   });
   assert.equal(status, 201);

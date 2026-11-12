@@ -5,6 +5,7 @@ const tripelSummary = {
   name: 'Gouden Tripel',
   beer_style: 'Belgische Tripel',
   description: 'Klassieke krachtige blondine met fruitige esters en een volle, warme afdronk.',
+  recept_volume: 20,
 };
 
 const pilsnerMalt = { ingredient_id: 1, name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_g: 5500 };
@@ -80,6 +81,7 @@ const summaryFields = {
   name: z.string(),
   beer_style: z.string().nullable(),
   description: z.string().nullable(),
+  recept_volume: z.number().meta({ description: 'Volume van het recept in liter' }),
 };
 
 export const RecipeSummary = z.object(summaryFields).meta({ example: tripelSummary });
@@ -265,6 +267,7 @@ const recipeInputExample = {
   name: 'Gouden Tripel',
   beer_style: 'Belgische Tripel',
   description: 'Klassieke krachtige blondine met fruitige esters en een volle, warme afdronk.',
+  recept_volume: 20,
   water: { mash_water_l: 20, sparge_water_l: 14 },
   ingredients: [
     { ingredient_id: 1, amount_g: 5500 },
@@ -289,6 +292,11 @@ export const RecipeInput = z
     name: z.string().trim().min(1, 'naam is verplicht').max(100, 'naam mag maximaal 100 tekens lang zijn'),
     beer_style: optionalText(50, 'bierstijl'),
     description: optionalText(1000, 'beschrijving'),
+    recept_volume: z
+      .number({ error: 'volume is verplicht en moet een getal zijn' })
+      .positive('volume moet groter zijn dan 0 liter')
+      .max(500, 'volume mag maximaal 500 liter zijn')
+      .meta({ description: 'Volume van het recept in liter, groter dan 0 en hoogstens 500' }),
     water: z
       .object({
         mash_water_l: z.number().positive('maischwater moet groter zijn dan 0 liter').max(500),

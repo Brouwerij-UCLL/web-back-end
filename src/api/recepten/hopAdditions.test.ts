@@ -44,6 +44,7 @@ test('de hopgiften van een recept met hun gegevens uit de catalogus', async () =
 test('dezelfde hop op meerdere momenten, van langste naar kortste kooktijd, ook in het volledige recept', async () => {
   const { body: recept } = await vraag('POST', '', {
     name: 'Hoptest',
+    recept_volume: 20,
     hops: [
       { hop_id: 3, amount_g: 20, boil_time_min: 10 },
       { hop_id: 3, amount_g: 45, boil_time_min: 60 },
@@ -62,7 +63,7 @@ test('dezelfde hop op meerdere momenten, van langste naar kortste kooktijd, ook 
 });
 
 test('een recept zonder hopgiften geeft een lege lijst', async () => {
-  const { body: recept } = await vraag('POST', '', { name: 'Zonder hop' });
+  const { body: recept } = await vraag('POST', '', { name: 'Zonder hop', recept_volume: 20 });
   const { status, body } = await vraag('GET', `/${recept.id}/hops`);
   assert.equal(status, 200);
   assert.deepEqual(body, []);
