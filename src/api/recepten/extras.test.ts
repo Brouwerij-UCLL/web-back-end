@@ -60,6 +60,7 @@ test('de extra ingrediënten van een recept met hun gegevens uit de catalogus', 
 test('eerst beslag, dan koken van langste naar kortste kooktijd, ook in het volledige recept', async () => {
   const { body: recept } = await vraag('POST', '', {
     name: 'Extratest',
+    recept_volume: 20,
     extras: [
       { extra_ingredient_id: 1, amount: 10, add_moment: 'koken', boil_time_min: 5 },
       { extra_ingredient_id: 6, amount: 5, add_moment: 'koken', boil_time_min: 15 },
@@ -77,7 +78,7 @@ test('eerst beslag, dan koken van langste naar kortste kooktijd, ook in het voll
 });
 
 test('een recept zonder extra ingrediënten geeft een lege lijst', async () => {
-  const { body: recept } = await vraag('POST', '', { name: 'Zonder extra' });
+  const { body: recept } = await vraag('POST', '', { name: 'Zonder extra', recept_volume: 20 });
   const { status, body } = await vraag('GET', `/${recept.id}/extras`);
   assert.equal(status, 200);
   assert.deepEqual(body, []);
