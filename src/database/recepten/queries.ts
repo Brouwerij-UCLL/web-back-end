@@ -180,6 +180,7 @@ export function getRecept(id: number): Recipe | undefined {
   return JSON.parse(result.recipe) as Recipe;
 }
 
+// In de volgorde waarin ze aan het recept zijn toegevoegd (rowid van recipe_ingredients).
 // Geeft een lege lijst als het recept geen ingrediënten heeft of niet bestaat.
 export function getReceptIngredients(id: number): RecipeIngredient[] {
   return db
@@ -192,6 +193,6 @@ export function getReceptIngredients(id: number): RecipeIngredient[] {
       FROM recipe_ingredients
       JOIN ingredients ON ingredients.ingredient_id = recipe_ingredients.ingredient_id
       WHERE recipe_ingredients.recipe_id = ?
-      ORDER BY recipe_ingredients.amount_g DESC`)
+      ORDER BY recipe_ingredients.rowid`)
     .all(id) as RecipeIngredient[];
 }

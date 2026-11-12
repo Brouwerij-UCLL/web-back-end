@@ -12,8 +12,21 @@ import { getExtras } from '../../database/recepten/extras.ts';
 import { getMashSchedule, replaceMashSchedule } from '../../database/recepten/mashSchedule.ts';
 import { getWater, saveWater } from '../../database/recepten/water.ts';
 import { getFermentationSchedule, replaceFermentationSchedule } from '../../database/recepten/fermentationSchedule.ts';
+import {
+  addFermentable,
+  deleteFermentable,
+  getFermentable,
+  getFermentables,
+  recipeExists,
+  updateFermentable,
+  type FermentableResult,
+} from '../../database/recepten/fermentables.ts';
 import { createRoutes, HttpFout } from '../openapi/route.ts';
 import {
+  Fermentable,
+  FermentableInput,
+  FermentableList,
+  FermentableParams,
   FermentationSchedule,
   FermentationScheduleInput,
   HopAdditionList,
@@ -296,5 +309,103 @@ recepten.route({
     const schedule = replaceFermentationSchedule(params.id, body);
     if (!schedule) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
     return schedule;
+  },
+});
+
+// ----- Vergistbare ingrediënten (moutstort) van een recept -----
+
+const ingredientNietGevonden = 'Het recept bestaat niet, of het ingrediënt zit niet in dit recept';
+const alInRecept = 'Een ingrediënt met deze naam en fabrikant zit al in dit recept';
+
+// Zet het resultaat van toevoegen of wijzigen om naar het ingrediënt of de passende fout.
+function fermentableOfFout(resultaat: FermentableResult, recipeId: number, ingredientId?: number) {
+  if (resultaat.ok) return resultaat.fermentable;
+  if (resultaat.reason === 'recipe_not_found') throw new HttpFout(404, `recept ${recipeId} niet gevonden`);
+  if (resultaat.reason === 'fermentable_not_found') throw new HttpFout(404, `ingrediënt ${ingredientId} zit niet in recept ${recipeId}`);
+  throw new HttpFout(409, `een ingrediënt met deze naam en fabrikant zit al in recept ${recipeId}`);
+}
+
+recepten.route({
+  method: 'get',
+  path: '/:id/fermentables',
+  summary: 'Vergistbare ingrediënten van een recept',
+  description: 'De moutstort van het recept: naam, fabrikant en hoeveelheid in kg, in de volgorde waarin de ingrediënten zijn toegevoegd.',
+  params: ReceptIdParams,
+  response: FermentableList,
+  responseDescription: 'De ingrediënten; een lege lijst als het recept er geen heeft',
+  errors: { 404: nietGevonden },
+  handler: ({ params }) => {
+    const lijst = getFermentables(params.id);
+    if (!lijst) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    return lijst;
+  },
+});
+
+recepten.route({
+  method: 'get',
+  path: '/:id/fermentables/:ingredientId',
+  summary: 'Eén vergistbaar ingrediënt van een recept',
+  params: FermentableParams,
+  response: Fermentable,
+  responseDescription: 'Het ingrediënt',
+  errors: { 404: ingredientNietGevonden },
+  handler: ({ params }) => {
+    if (!recipeExists(params.id)) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    const ingredient = getFermentable(params.id, params.ingredientId);
+    if (!ingredient) throw new HttpFout(404, `ingrediënt ${params.ingredientId} zit niet in recept ${params.id}`);
+    return ingredient;
+  },
+});
+
+recepten.route({
+  method: 'post',
+  path: '/:id/fermentables',
+  summary: 'Vergistbaar ingrediënt aan een recept toevoegen',
+  description:
+    'Voegt een ingrediënt met naam, optioneel een fabrikant, en een hoeveelheid in kg toe aan de moutstort. ' +
+    'Staat er in de catalogus nog geen ingrediënt met die naam en fabrikant (hoofdletters niet meegerekend), dan wordt het aangemaakt. ' +
+    'Het antwoord bevat het id van het ingrediënt.',
+  params: ReceptIdParams,
+  body: FermentableInput,
+  status: 201,
+  response: Fermentable,
+  responseDescription: 'Het toegevoegde ingrediënt',
+  errors: { 404: nietGevonden, 409: alInRecept },
+  handler: ({ params, body }) => fermentableOfFout(addFermentable(params.id, body), params.id),
+});
+
+recepten.route({
+  method: 'put',
+  path: '/:id/fermentables/:ingredientId',
+  summary: 'Vergistbaar ingrediënt van een recept wijzigen',
+  description:
+    'Slaat de nieuwe naam, fabrikant en hoeveelheid op. Bij een andere naam of fabrikant verwijst het recept naar het ' +
+    'catalogus-ingrediënt met die naam en fabrikant (bestaand of nieuw), zodat andere recepten ongewijzigd blijven; het id ' +
+    'in het antwoord is dan dat van het nieuwe ingrediënt. De andere ingrediënten en de volgorde blijven ongewijzigd.',
+  params: FermentableParams,
+  body: FermentableInput,
+  response: Fermentable,
+  responseDescription: 'Het gewijzigde ingrediënt',
+  errors: { 404: ingredientNietGevonden, 409: alInRecept },
+  handler: ({ params, body }) =>
+    fermentableOfFout(updateFermentable(params.id, params.ingredientId, body), params.id, params.ingredientId),
+});
+
+recepten.route({
+  method: 'delete',
+  path: '/:id/fermentables/:ingredientId',
+  summary: 'Vergistbaar ingrediënt uit een recept verwijderen',
+  description: 'Haalt het ingrediënt uit de moutstort van dit recept. Het ingrediënt blijft in de catalogus.',
+  params: FermentableParams,
+  status: 204,
+  response: Fermentable,
+  responseDescription: 'Het ingrediënt is uit het recept verwijderd',
+  errors: { 404: ingredientNietGevonden },
+  handler: ({ params }) => {
+    if (!recipeExists(params.id)) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    const ingredient = getFermentable(params.id, params.ingredientId);
+    if (!ingredient) throw new HttpFout(404, `ingrediënt ${params.ingredientId} zit niet in recept ${params.id}`);
+    deleteFermentable(params.id, params.ingredientId);
+    return ingredient;
   },
 });
