@@ -21,7 +21,6 @@
   },
   "dependencies": {
     "@types/cors": "^2.8.19",
-    "aedes": "^1.2.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "mqtt": "^5.16.0",

@@ -79,7 +79,6 @@ src/
     extras/
       queries.ts    de queries op de catalogus extra_ingredients
   mqtt/             verbinding met de MQTT-broker
-    broker.ts       de eigen MQTT-broker (Aedes)
     client.ts       verbinden en abonneren
     topics.ts       de topics en het ontleden ervan
     handlers.ts     verwerken van binnenkomende berichten
@@ -124,12 +123,28 @@ recepten.route({
 
 ## MQTT-broker
 
-`npm start` start ook een eigen MQTT-broker (Aedes) in de back-end. Ketel en kast verbinden daarmee, niet met een publieke testbroker.
+De back-end, ketel en kast communiceren via een [Mosquitto](https://mosquitto.org)-broker. Mosquitto ondersteunt MQTT 3.1, 3.1.1 én 5.0 tegelijk, dus elke client mag zijn eigen versie gebruiken (ESP32/PubSubClient op 3.1.1, MQTTX op 5.0). De back-end verbindt met `MQTT_URL` (standaard `mqtt://localhost:1883`).
 
-- Adres voor de toestellen: het IP-adres van de computer of server waarop de back-end draait, poort `MQTT_PORT` (standaard 1883).
-- Login: vul `MQTT_USERNAME` en `MQTT_PASSWORD` in `.env` in; dan moet elke client inloggen, ook de back-end zelf. Leeg = iedereen in het netwerk mag verbinden.
-- Retained berichten, last will en QoS 0, 1 en 2 werken.
-- Een externe broker gebruiken: `MQTT_BROKER=off` en `MQTT_URL` op die broker zetten, bv. `mqtt://broker.emqx.io:1883`.
+**Lokaal (Windows)**
+
+1. Installeer Mosquitto: `winget install EclipseFoundation.Mosquitto` of de installer van [mosquitto.org/download](https://mosquitto.org/download/). Het draait daarna als Windows-dienst op poort 1883.
+2. Standaard aanvaardt Mosquitto alleen verbindingen van de eigen pc. Moeten toestellen in het netwerk verbinden, voeg dan in `C:\Program Files\mosquitto\mosquitto.conf` toe:
+   ```
+   listener 1883 0.0.0.0
+   allow_anonymous true
+   ```
+   en herstart de dienst (`Restart-Service mosquitto` als administrator).
+3. `npm start`: de back-end verbindt met `mqtt://localhost:1883`.
+
+**Login aanzetten**
+
+Maak een wachtwoordbestand met `mosquitto_passwd -c <bestand> <gebruiker>`, zet in `mosquitto.conf` `allow_anonymous false` en `password_file <bestand>`, en vul dezelfde gebruiker in `MQTT_USERNAME` en `MQTT_PASSWORD` in `.env` in.
+
+**Server**
+
+De Proxmox-installatie in [Brouwerij-UCLL/brouwapp-deploy](https://github.com/Brouwerij-UCLL/brouwapp-deploy) installeert Mosquitto naast de back-end en maakt de login automatisch aan uit `MQTT_USERNAME` en `MQTT_PASSWORD`.
+
+- Adres voor de toestellen: het IP-adres van de pc of server met Mosquitto, poort 1883.
 - Op Vercel draait geen broker: de toestellen hebben een server nodig die blijft aanstaan.
 
 ## Database (SQLite)
