@@ -8,6 +8,8 @@ import { after, before, describe, test } from 'node:test';
 process.env.DATABASE_FILE = ':memory:';
 const { app } = await import('../../app.ts');
 const { db } = await import('../../database/db.ts');
+const { config } = await import('../../config.ts');
+const max = config.maxVolumeLiter;
 
 let server: Server;
 let baseUrl: string;
@@ -81,8 +83,8 @@ describe('opslaan en wijzigen', () => {
     assert.equal((await vraag('GET', `/${id}`)).body.recept_volume, 40);
   });
 
-  test('de grenswaarden zijn toegelaten: net boven 0 en 500 liter', async () => {
-    for (const volume of [0.1, 500]) {
+  test('de grenswaarden zijn toegelaten: net boven 0 en het maximum (MAX_VOLUME_LITER)', async () => {
+    for (const volume of [0.1, max]) {
       const { status, body } = await vraag('POST', '', { name: 'Grens', recept_volume: volume });
       assert.equal(status, 201, String(volume));
       assert.equal(body.recept_volume, volume);
@@ -96,7 +98,7 @@ describe('ongeldig volume', () => {
     ['volume 0', 0],
     ['negatief volume', -3],
     ['volume dat geen getal is', 'veel'],
-    ['volume boven 500 liter', 501],
+    ['volume boven het maximum', max + 1],
   ];
 
   for (const [omschrijving, volume] of gevallen) {

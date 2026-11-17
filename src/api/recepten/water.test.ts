@@ -7,6 +7,7 @@ import { after, before, test } from 'node:test';
 process.env.DATABASE_FILE = ':memory:';
 const { app } = await import('../../app.ts');
 const { db } = await import('../../database/db.ts');
+const { config } = await import('../../config.ts');
 
 let server: Server;
 let baseUrl: string;
@@ -94,7 +95,10 @@ test('AC4: ongeldige hoeveelheden geven 400 met het veld, en er wordt niets opge
     [{ mash_water_l: 18, sparge_water_l: -1 }, /sparge_water_l mag niet negatief zijn/],
     [{ mash_water_l: '18', sparge_water_l: 12 }, /mash_water_l ontbreekt of is geen getal/],
     [{ mash_water_l: 18 }, /sparge_water_l ontbreekt of is geen getal/],
-    [{ mash_water_l: 501, sparge_water_l: 12 }, /mash_water_l mag maximaal 500 liter zijn/],
+    [
+      { mash_water_l: config.maxVolumeLiter + 1, sparge_water_l: 12 },
+      new RegExp(`mash_water_l mag maximaal ${config.maxVolumeLiter} liter zijn`),
+    ],
   ];
   for (const [body, melding] of gevallen) {
     const antwoord = await vraag('PUT', `/${id}/water`, body);

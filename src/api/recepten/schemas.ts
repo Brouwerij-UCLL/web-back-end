@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import { config } from '../../config.ts';
+
+// Maximale capaciteit van de brouwketel (MAX_VOLUME_LITER in .env): bovengrens voor elk volume in liter.
+const maxLiter = config.maxVolumeLiter;
 
 const tripelSummary = {
   id: 2,
@@ -295,12 +299,18 @@ export const RecipeInput = z
     recept_volume: z
       .number({ error: 'volume is verplicht en moet een getal zijn' })
       .positive('volume moet groter zijn dan 0 liter')
-      .max(500, 'volume mag maximaal 500 liter zijn')
-      .meta({ description: 'Volume van het recept in liter, groter dan 0 en hoogstens 500' }),
+      .max(maxLiter, `volume mag maximaal ${maxLiter} liter zijn`)
+      .meta({ description: `Volume van het recept in liter, groter dan 0 en hoogstens ${maxLiter}` }),
     water: z
       .object({
-        mash_water_l: z.number().positive('maischwater moet groter zijn dan 0 liter').max(500),
-        sparge_water_l: z.number().min(0, 'spoelwater mag niet negatief zijn').max(500),
+        mash_water_l: z
+          .number()
+          .positive('maischwater moet groter zijn dan 0 liter')
+          .max(maxLiter, `maischwater mag maximaal ${maxLiter} liter zijn`),
+        sparge_water_l: z
+          .number()
+          .min(0, 'spoelwater mag niet negatief zijn')
+          .max(maxLiter, `spoelwater mag maximaal ${maxLiter} liter zijn`),
       })
       .strict()
       .nullable()
@@ -393,13 +403,13 @@ export const WaterInput = z
     mash_water_l: z
       .number({ error: 'mash_water_l ontbreekt of is geen getal' })
       .positive({ error: 'mash_water_l moet groter zijn dan 0 liter' })
-      .max(500, { error: 'mash_water_l mag maximaal 500 liter zijn' })
-      .meta({ description: 'Maischwater in liter, groter dan 0' }),
+      .max(maxLiter, { error: `mash_water_l mag maximaal ${maxLiter} liter zijn` })
+      .meta({ description: `Maischwater in liter, groter dan 0 en hoogstens ${maxLiter}` }),
     sparge_water_l: z
       .number({ error: 'sparge_water_l ontbreekt of is geen getal' })
       .min(0, { error: 'sparge_water_l mag niet negatief zijn' })
-      .max(500, { error: 'sparge_water_l mag maximaal 500 liter zijn' })
-      .meta({ description: 'Spoelwater in liter; 0 als er niet gespoeld wordt' }),
+      .max(maxLiter, { error: `sparge_water_l mag maximaal ${maxLiter} liter zijn` })
+      .meta({ description: `Spoelwater in liter, hoogstens ${maxLiter}; 0 als er niet gespoeld wordt` }),
   })
   .strict()
   .meta({ example: waterExample });
