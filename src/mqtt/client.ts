@@ -8,6 +8,8 @@ const options = {
   clean: true,
   connectTimeout: 4000,
   reconnectPeriod: 1000,
+  username: config.mqttUsername,
+  password: config.mqttPassword,
 };
 
 // Verbindt met de MQTT-broker, abonneert op de topics en geeft de client terug (bv. om te publiceren).
