@@ -47,13 +47,25 @@ app.use((req: Request, res: Response) => {
 
 app.use((error: unknown, req: Request, res: Response, next: NextFunction) => {
   if (error instanceof HttpFout) {
-    res.status(error.status).json({ fout: error.message });
+    const payload: { fout: string; velden?: Array<{ veld: string; melding: string }> } = { fout: error.message };
+    if (error.status === 400 && error.velden && error.velden.length > 0) {
+      payload.velden = error.velden;
+    }
+    res.status(error.status).json(payload);
     return;
   }
   // Fouten van Express zelf met een 4xx-status, bv. ongeldige JSON in de request body.
   const status = (error as { status?: number }).status;
   if (status && status >= 400 && status < 500) {
-    res.status(status).json({ fout: (error as Error).message });
+    const message = (error as Error).message;
+    if (message.includes('Unexpected end of JSON') || message.includes('invalid json') || message.includes('JSON')) {
+      res.status(status).json({
+        fout: 'Het recept bevat ongeldige gegevens',
+        velden: [{ veld: 'body', melding: 'request body is geen geldige JSON' }],
+      });
+      return;
+    }
+    res.status(status).json({ fout: message });
     return;
   }
   console.error(`[FOUT] ${req.method} ${req.originalUrl}:`, error);

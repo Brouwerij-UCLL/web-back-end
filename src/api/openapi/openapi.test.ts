@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
+import express from 'express';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { after, before, test } from 'node:test';
+import { z } from 'zod';
+import { createRoutes, HttpFout } from './route.ts';
 
 // Controleert de API-documentatie tegen de acceptatiecriteria, op een tijdelijke database in het geheugen.
 process.env.DATABASE_FILE = ':memory:';
@@ -130,4 +133,61 @@ test('een niet-geheel recept-id geeft aan welke parameter ongeldig is', async ()
 
   assert.equal(antwoord.status, 400);
   assert.match(body.fout, /id: moet een geheel getal van minimaal 1 zijn/);
+});
+
+test('ongeldige request bodies geven alle velden terug in dezelfde 400-respons', async () => {
+  const demoApp = express();
+  const demo = createRoutes('/api/demo', 'recepten');
+
+  demo.route({
+    method: 'post',
+    path: '/',
+    summary: 'Demo validatie',
+    body: z.object({
+      naam: z.string().min(1, { message: 'naam is verplicht' }),
+      stappen: z.array(
+        z.object({
+          temperatuur_celsius: z.number().min(20, { message: 'temperatuur moet tussen 20 en 80 °C liggen' }).max(80, { message: 'temperatuur moet tussen 20 en 80 °C liggen' }),
+        }).strict(),
+      ).min(1),
+    }).strict(),
+    response: z.object({ ok: z.boolean() }),
+    responseDescription: 'OK',
+    handler: ({ body }) => ({ ok: Boolean(body) }),
+  });
+
+  demoApp.use(express.json());
+  demoApp.use('/api/demo', demo.router);
+  demoApp.use((error: unknown, req: any, res: any, next: any) => {
+    if (error instanceof HttpFout) {
+      const payload: { fout: string; velden?: Array<{ veld: string; melding: string }> } = { fout: error.message };
+      if (error.status === 400 && error.velden && error.velden.length > 0) {
+        payload.velden = error.velden;
+      }
+      res.status(error.status).json(payload);
+      return;
+    }
+    next(error);
+  });
+
+  const server = demoApp.listen(0);
+  await new Promise((resolve) => server.once('listening', resolve));
+  const port = (server.address() as AddressInfo).port;
+
+  try {
+    const antwoord = await fetch(`http://localhost:${port}/api/demo/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ naam: '', temperatuuur: 'oops', stappen: [{ temperatuur_celsius: 10 }] }),
+    });
+    const body = await antwoord.json() as { fout: string; velden?: Array<{ veld: string; melding: string }> };
+
+    assert.equal(antwoord.status, 400);
+    assert.equal(body.fout, 'Het recept bevat ongeldige gegevens');
+    assert.ok(body.velden?.some((veld) => veld.veld === 'naam' && veld.melding.includes('naam')));
+    assert.ok(body.velden?.some((veld) => veld.veld === 'stappen[0].temperatuur_celsius'));
+    assert.ok(body.velden?.some((veld) => veld.veld === 'temperatuuur'));
+  } finally {
+    server.close();
+  }
 });
