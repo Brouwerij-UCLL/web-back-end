@@ -13,6 +13,8 @@ export type ReceptOverzicht = {
 export type Recept = ReceptOverzicht & {
   aangemaakt_op: string;
   gewijzigd_op: string;
+  maischwater_liter: number | null;
+  spoelwater_liter: number | null;
 };
 
 export type Ingredient = {
@@ -24,6 +26,11 @@ export type Ingredient = {
 
 export type ReceptWithIngredients = Recept & {
   ingredienten: Ingredient[];
+};
+
+export type ReceptWater = {
+  maischwater_liter: number;
+  spoelwater_liter: number;
 };
 
 const receptKolommen = `
@@ -42,8 +49,12 @@ export function getRecept(id: number): Recept | undefined {
     .prepare(`
       SELECT ${receptKolommen},
         recipes.timestamp_create AS aangemaakt_op,
-        recipes.timestamp_edit AS gewijzigd_op
+        recipes.timestamp_edit AS gewijzigd_op,
+        recipe_water.mash_water_l AS maischwater_liter,
+        recipe_water.sparge_water_l AS spoelwater_liter
       FROM recipes
+      LEFT JOIN recipe_water
+        ON recipes.recipe_id = recipe_water.recipe_id
       WHERE recipes.recipe_id = ?`)
     .get(id) as Recept | undefined;
 }
@@ -68,4 +79,46 @@ export function getReceptWithIngredients(id: number): ReceptWithIngredients | un
   const recept = getRecept(id);
   if (!recept) return undefined;
   return { ...recept, ingredienten: getReceptIngredients(id) };
+}
+
+export function getReceptWater(id: number): ReceptWater | null {
+  const water = db.prepare(`
+    SELECT
+      mash_water_l AS maischwater_liter,
+      sparge_water_l AS spoelwater_liter
+    FROM recipe_water 
+    WHERE recipe_id = ?
+  `).get(id) as ReceptWater | undefined;
+
+  return water ?? null;
+}
+
+export function saveReceptWater(
+  id: number,
+  maischwater: number,
+  spoelwater: number
+): ReceptWater | null {
+
+  const recept = db.prepare(
+    'SELECT recipe_id FROM recipes WHERE recipe_id = ?'
+  ).get(id);
+
+  if (!recept) {
+    return null;
+  }
+
+  db.prepare(`
+    INSERT INTO recipe_water (
+      recipe_id,
+      mash_water_l,
+      sparge_water_l
+    )
+    VALUES (?, ?, ?)
+    ON CONFLICT(recipe_id)
+    DO UPDATE SET
+      mash_water_l = excluded.mash_water_l,
+      sparge_water_l = excluded.sparge_water_l
+    `).run(id, maischwater, spoelwater);
+
+    return getReceptWater(id);
 }

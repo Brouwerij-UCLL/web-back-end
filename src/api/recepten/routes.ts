@@ -2,10 +2,12 @@ import {
   getRecept,
   getRecepten,
   getReceptIngredients,
+  getReceptWater,
   getReceptWithIngredients,
+  saveReceptWater,
 } from '../../database/recepten/queries.ts';
 import { createRoutes, HttpFout } from '../openapi/route.ts';
-import { IngredientenLijst, Recept, ReceptenLijst, ReceptIdParams, ReceptMetIngredienten } from './schemas.ts';
+import { IngredientenLijst, Recept, ReceptenLijst, ReceptIdParams, ReceptMetIngredienten, ReceptWaterAntwoord, ReceptWaterInvoer } from './schemas.ts';
 
 export const recepten = createRoutes('/api/recepten', 'recepten');
 
@@ -63,4 +65,40 @@ recepten.route({
     if (!recept) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
     return recept;
   },
+});
+
+recepten.route({
+  method: 'get',
+  path: '/:id/water',
+  summary: 'Waterhoeveelheden van een recept ophalen',
+  params: ReceptIdParams,
+  response: ReceptWaterAntwoord,
+  responseDescription: 'De waterhoeveelheden van het recept',
+  errors: { 404: nietGevonden },
+  handler: ({ params }) => {
+    const water = getReceptWater(params.id);
+    if (!water) throw new HttpFout(404, `Water voor recept ${params.id} niet gevonden`);
+    return water;
+  },
+});
+
+recepten.route({
+  method: 'put',
+  path: '/:id/water',
+  summary: 'Waterhoeveelheden van een recept opslaan of aanpassen',
+  params: ReceptIdParams,
+  body: ReceptWaterInvoer,
+  response: ReceptWaterAntwoord,
+  responseDescription: 'De opgeslagen waterhoeveelheden',
+  errors: { 404: nietGevonden },
+  handler: ({ params, body }) => {
+    const water = saveReceptWater(
+      params.id,
+      body.maischwater_liter,
+      body.spoelwater_liter
+    );
+
+    if (!water) throw new HttpFout(404, `Recept ${params.id} niet gevonden`);
+    return water;
+  }
 });

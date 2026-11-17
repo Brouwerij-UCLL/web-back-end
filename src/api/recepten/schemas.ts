@@ -38,7 +38,9 @@ const receptVelden = {
   gewijzigd_op: z.string().meta({ description: 'Tijdstip in het formaat "JJJJ-MM-DD uu:mm:ss"' }),
 };
 
-export const Recept = z.object(receptVelden).meta({ example: tripel });
+export const Recept = z.object({...receptVelden, maischwater_liter: z.number().positive().nullable(),
+  spoelwater_liter: z.number().nonnegative().nullable()
+}).meta({ example: tripel, maischwater_liter: 18.5, spoelwater_liter: 12 });
 
 export const Ingredient = z
   .object({
@@ -54,3 +56,28 @@ export const IngredientenLijst = z.array(Ingredient).meta({ example: [pilsnerMou
 export const ReceptMetIngredienten = z
   .object({ ...receptVelden, ingredienten: z.array(Ingredient) })
   .meta({ example: { ...tripel, ingredienten: [pilsnerMout] } });
+
+export const ReceptWaterInvoer = z.object({
+  maischwater_liter: z.number({
+    error: 'maischwater_liter moet een getal zijn'
+  }).positive('maischwater_liter moet groter zijn dan 0'),
+
+  spoelwater_liter: z.number({
+     error: 'spoelwater_liter moet een getal zijn'
+  }).nonnegative('spoelwater_liter mag niet negatief zijn')
+}).meta({
+  example: {
+    maischwater_liter: 18.5,
+    spoelwater_liter: 12
+  }
+});
+
+export const ReceptWaterAntwoord = z.object({
+  maischwater_liter: z.number().positive(),
+  spoelwater_liter: z.number().nonnegative()
+}).meta({
+  example: {
+    maischwater_liter: 18.5,
+    spoelwater_liter: 12
+  }
+});
