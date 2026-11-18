@@ -147,6 +147,15 @@ De Proxmox-installatie in [Brouwerij-UCLL/brouwapp-deploy](https://github.com/Br
 - Adres voor de toestellen: het IP-adres van de pc of server met Mosquitto, poort 1883.
 - Op Vercel draait geen broker: de toestellen hebben een server nodig die blijft aanstaan.
 
+### Toestellen
+
+Elk toestel gebruikt zijn MAC-adres als id: 12 hexadecimale tekens in kleine letters, zonder dubbelpunten, bv. `brouwer/a4cf12b3c8e0/…`.
+
+- Bij het verbinden publiceert een toestel `brouwer/<mac>/info` (retained, JSON met `type`, `name`, `firmware`, `sensors`, `actuators` en `commands`) en `brouwer/<mac>/status` = `online` (retained). Als last will stelt het `brouwer/<mac>/status` = `offline` in (retained).
+- De back-end bewaart elk toestel in de tabel `devices`; `GET /api/devices` en `GET /api/devices/{mac}` tonen ze met hun online-status.
+- Een leeg retained bericht op `brouwer/<mac>/info` haalt een toestel definitief weg.
+- Ongeldige berichten (geen MAC-adres, geen JSON, geen `type`) worden gelogd en genegeerd.
+
 ## Database (SQLite)
 
 De back-end gebruikt SQLite via de in Node ingebouwde module `node:sqlite`. Je hoeft niets apart te installeren of te starten; `npm start` en `npm run dev` openen de database automatisch.

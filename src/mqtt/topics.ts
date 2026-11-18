@@ -1,5 +1,6 @@
-// Topics waarop de back-end luistert: brouwer/<brouwerId>/...
+// Topics waarop de back-end luistert: brouwer/<brouwerId>/... (brouwerId = MAC-adres van het toestel)
 export const subscribedTopics = [
+  'brouwer/+/info',
   'brouwer/+/sensor/+',
   'brouwer/+/actuator/+/state',
   'brouwer/+/status',
