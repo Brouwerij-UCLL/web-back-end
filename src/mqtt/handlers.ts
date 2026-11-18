@@ -1,4 +1,4 @@
-import { normaliseerMac, verwerkInfo, verwerkStatus } from './devices.ts';
+import { normaliseerMac, verwerkActuatorToestand, verwerkFout, verwerkInfo, verwerkMeting, verwerkStatus } from './devices.ts';
 import { parseTopic } from './topics.ts';
 
 // Verwerkt één binnenkomend MQTT-bericht.
@@ -8,18 +8,13 @@ export function handleMessage(topic: string, payload: string): void {
   const { brouwerId, hoofdtype, naam } = parseTopic(topic);
   const mac = normaliseerMac(brouwerId);
 
-  if (hoofdtype === 'info' || hoofdtype === 'status') {
-    if (!mac) {
-      console.warn(`[TOESTEL] "${brouwerId}" is geen geldig MAC-adres; ${hoofdtype} genegeerd`);
-      return;
-    }
-    if (hoofdtype === 'info') verwerkInfo(mac, payload);
-    else verwerkStatus(mac, payload);
-  } else if (hoofdtype === 'sensor') {
-    console.log(`[SENSOR] Brouwer #${brouwerId} stuurt ${naam}: ${payload}`);
-    // DATABASE UPDATE LATER: Sla deze specifieke meting op
-  } else if (hoofdtype === 'actuator') {
-    console.log(`[ACTUATOR] Brouwer #${brouwerId} meldt toestand van ${naam}: ${payload}`);
-    // DATABASE UPDATE LATER: Update de huidige status van de actuator
+  if (!mac) {
+    console.warn(`[TOESTEL] "${brouwerId}" is geen geldig MAC-adres; ${topic} genegeerd`);
+    return;
   }
+  if (hoofdtype === 'info') verwerkInfo(mac, payload);
+  else if (hoofdtype === 'status') verwerkStatus(mac, payload);
+  else if (hoofdtype === 'sensor' && naam) verwerkMeting(mac, naam, payload);
+  else if (hoofdtype === 'actuator' && naam) verwerkActuatorToestand(mac, naam, payload);
+  else if (hoofdtype === 'fout') verwerkFout(mac, payload);
 }

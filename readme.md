@@ -154,7 +154,9 @@ Elk toestel gebruikt zijn MAC-adres als id: 12 hexadecimale tekens in kleine let
 - Bij het verbinden publiceert een toestel `brouwer/<mac>/info` (retained, JSON met `type`, `name`, `firmware`, `sensors`, `actuators` en `commands`) en `brouwer/<mac>/status` = `online` (retained). Als last will stelt het `brouwer/<mac>/status` = `offline` in (retained).
 - De back-end bewaart elk toestel in de tabel `devices`; `GET /api/devices` en `GET /api/devices/{mac}` tonen ze met hun online-status.
 - Een leeg retained bericht op `brouwer/<mac>/info` haalt een toestel definitief weg.
-- Ongeldige berichten (geen MAC-adres, geen JSON, geen `type`) worden gelogd en genegeerd.
+- Metingen komen binnen op `brouwer/<mac>/sensor/<naam>` (een getal met een punt, bv. `66.8`) en de toestand van een actuator op `brouwer/<mac>/actuator/<naam>/state` (bv. `on`, `off` of `40`). De back-end houdt per sensor en actuator alleen de laatste waarde bij (tabel `device_readings`); het toestel toont die als `value`/`state` met `updated_at`. De historiek per brouwsessie volgt nog (SCRUM-79).
+- Foutmeldingen van een toestel komen op `brouwer/<mac>/fout`, als JSON `{"code", "message"}` of als platte tekst. Ze worden gelogd en live doorgestuurd, niet bewaard.
+- Ongeldige berichten (geen MAC-adres, geen JSON, geen `type`, een meting die geen getal is) worden gelogd en genegeerd.
 
 ### Live updates (Server-Sent Events)
 
@@ -166,6 +168,9 @@ Elk toestel gebruikt zijn MAC-adres als id: 12 hexadecimale tekens in kleine let
 | `device.status` | `{"mac", "online", "last_seen"}` |
 | `device.updated` | het volledige toestel, zoals `GET /api/devices/{mac}` |
 | `device.removed` | `{"mac"}` |
+| `meting` | `{"mac", "sensor", "value", "unit", "at"}` |
+| `actuator.state` | `{"mac", "actuator", "state", "at"}` |
+| `fout` | `{"mac", "code", "message", "at"}` |
 
 Valt de verbinding weg, dan verbindt de browser na 3 s vanzelf opnieuw en krijgt hij een nieuwe snapshot. In Angular:
 
@@ -175,6 +180,14 @@ bron.addEventListener('snapshot', (e) => this.devices.set(JSON.parse(e.data).dev
 bron.addEventListener('device.status', (e) => {
   const { mac, online, last_seen } = JSON.parse(e.data);
   this.devices.update((lijst) => lijst.map((d) => (d.mac === mac ? { ...d, online, last_seen } : d)));
+});
+bron.addEventListener('meting', (e) => {
+  const { mac, sensor, value, at } = JSON.parse(e.data);
+  this.devices.update((lijst) =>
+    lijst.map((d) =>
+      d.mac === mac ? { ...d, sensors: d.sensors.map((s) => (s.name === sensor ? { ...s, value, updated_at: at } : s)) } : d,
+    ),
+  );
 });
 ```
 

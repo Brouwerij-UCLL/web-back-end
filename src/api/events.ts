@@ -8,13 +8,16 @@ import { gebeurtenissen, type Gebeurtenissen } from '../events.ts';
 //   event: device.status   data: {"mac": "...", "online": true, "last_seen": "..."}
 //   event: device.updated  data: { het volledige toestel, zoals GET /api/devices/{mac} }
 //   event: device.removed  data: {"mac": "..."}
+//   event: meting          data: {"mac", "sensor", "value", "unit", "at"}
+//   event: actuator.state  data: {"mac", "actuator", "state", "at"}
+//   event: fout            data: {"mac", "code", "message", "at"}
 
 export const eventsRouter = Router();
 
 // Een commentaarregel om de zoveel tijd houdt de verbinding open langs proxy's.
 const HARTSLAG_MS = 25_000;
 
-const doorgestuurd = ['device.status', 'device.updated', 'device.removed'] as const satisfies (keyof Gebeurtenissen)[];
+const doorgestuurd = ['device.status', 'device.updated', 'device.removed', 'meting', 'actuator.state', 'fout'] as const satisfies (keyof Gebeurtenissen)[];
 
 function stuur(res: Response, event: string, data: unknown): void {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
