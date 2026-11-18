@@ -47,6 +47,7 @@ const catalogus = () => aantal('SELECT count(*) AS n FROM ingredients');
 async function nieuwRecept(): Promise<number> {
   const { status, body } = await vraag('POST', '', {
     name: 'Moutstort-test',
+    recept_volume: 20,
     ingredients: [
       { ingredient_id: 7, amount_g: 200 },
       { ingredient_id: 1, amount_g: 5500 },
@@ -129,7 +130,7 @@ describe('AC1: lijst opvragen', () => {
   });
 
   test('een recept zonder ingrediënten geeft een lege lijst', async () => {
-    const { body } = await vraag('POST', '', { name: 'Leeg recept' });
+    const { body } = await vraag('POST', '', { name: 'Leeg recept', recept_volume: 20 });
     assert.deepEqual(await lijst(body.id), []);
   });
 
