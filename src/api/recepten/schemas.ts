@@ -245,7 +245,7 @@ const extraInput = z
 
 const mashStepInput = z
   .object({
-    temperature_c: z.number().min(20, 'temperatuur moet tussen 20 en 80 °C liggen').max(120, 'temperatuur moet tussen 20 en 80 °C liggen'),
+    temperature_c: z.number().min(20, 'temperatuur moet tussen 20 en 100 °C liggen').max(100, 'temperatuur moet tussen 20 en 100 °C liggen'),
     duration_min: z.number().int().min(1, 'duur moet tussen 1 en 240 minuten liggen').max(240, 'duur moet tussen 1 en 240 minuten liggen'),
   })
   .strict();
@@ -345,7 +345,7 @@ const mashScheduleExample = {
   steps: mashScheduleInputExample.steps.map((step, i) => ({ step_nr: i + 1, ...step })),
 };
 
-// Foutmelding voor een veld van een stap, bv. "stap 2: temperature moet tussen 20 en 80 °C liggen (gekregen: 90)".
+// Foutmelding voor een veld van een stap, bv. "stap 2: temperature moet tussen 20 en 100 °C liggen (gekregen: 105)".
 function stepError(text: string) {
   return (issue: { path?: PropertyKey[]; input?: unknown }) => {
     const index = issue.path?.find((part) => typeof part === 'number');
@@ -361,9 +361,9 @@ function received(input: unknown): string {
 const MashStepInput = z.object({
   temperature: z
     .number({ error: stepError('temperature ontbreekt of is geen getal') })
-    .min(20, { error: stepError('temperature moet tussen 20 en 80 °C liggen') })
-    .max(120, { error: stepError('temperature moet tussen 20 en 80 °C liggen') })
-    .meta({ description: 'Temperatuur in °C, van 20 tot en met 80' }),
+    .min(20, { error: stepError('temperature moet tussen 20 en 100 °C liggen') })
+    .max(100, { error: stepError('temperature moet tussen 20 en 100 °C liggen') })
+    .meta({ description: 'Temperatuur in °C, van 20 tot en met 100' }),
   duration: z
     .number({ error: stepError('duration ontbreekt of is geen getal') })
     .int({ error: stepError('duration moet een geheel aantal minuten zijn') })

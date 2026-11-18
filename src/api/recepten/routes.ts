@@ -227,7 +227,7 @@ recepten.route({
   description:
     'Vervangt alle maischstappen in één keer. De stappen worden genummerd in de volgorde van de lijst. ' +
     'Is één waarde ongeldig, dan wordt er niets opgeslagen en blijft het vorige schema staan. ' +
-    'Grenzen: temperature 20–80 °C, duration 1–240 minuten.',
+    'Grenzen: temperature 20–100 °C, duration 1–240 minuten.',
   params: ReceptIdParams,
   body: MashScheduleInput,
   response: MashSchedule,
