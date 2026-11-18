@@ -149,7 +149,7 @@ describe('AC3: alles of niets', () => {
       steps: [
         { temperature: 50, duration: 10 },
         { temperature: 66, duration: 60 },
-        { temperature: 95, duration: 10 },
+        { temperature: 105, duration: 10 },
       ],
     });
 
@@ -174,7 +174,7 @@ describe('AC3: alles of niets', () => {
 describe('AC4: temperatuur of duur buiten de grenzen', () => {
   const cases = [
     { field: 'temperature', value: 19.9 },
-    { field: 'temperature', value: 80.1 },
+    { field: 'temperature', value: 100.1 },
     { field: 'duration', value: 0 },
     { field: 'duration', value: 241 },
   ];
@@ -197,7 +197,7 @@ describe('AC4: temperatuur of duur buiten de grenzen', () => {
     const response = await put(1, {
       steps: [
         { temperature: 20, duration: 1 },
-        { temperature: 80, duration: 240 },
+        { temperature: 100, duration: 240 },
       ],
     });
     assert.equal(response.status, 200);
