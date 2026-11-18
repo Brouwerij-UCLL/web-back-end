@@ -7,10 +7,10 @@ const ketel = {
   firmware: '1.0.0',
   online: true,
   last_seen: '2026-11-18 14:05:12',
-  sensors: [{ name: 'temperatuur', unit: '°C' }],
+  sensors: [{ name: 'temperatuur', unit: '°C', value: 66.8, updated_at: '2026-11-18 14:05:10' }],
   actuators: [
-    { name: 'verwarming', values: ['on', 'off'] },
-    { name: 'roerwerk', values: ['on', 'off'] },
+    { name: 'verwarming', values: ['on', 'off'], state: 'on', updated_at: '2026-11-18 14:04:55' },
+    { name: 'roerwerk', values: ['on', 'off'], state: null, updated_at: null },
   ],
   commands: ['setpoint', 'actuator', 'recept'],
 };
@@ -33,8 +33,22 @@ export const Device = z
     firmware: z.string().nullable(),
     online: z.boolean().meta({ description: 'Laatst gemelde status; offline ook via de last will van het toestel' }),
     last_seen: z.string().nullable().meta({ description: 'Tijdstip van het laatste info- of statusbericht' }),
-    sensors: z.array(z.object({ name: z.string(), unit: z.string().optional() })),
-    actuators: z.array(z.object({ name: z.string(), values: z.array(z.string()).optional() })),
+    sensors: z.array(
+      z.object({
+        name: z.string(),
+        unit: z.string().optional(),
+        value: z.number().nullable().meta({ description: 'Laatst gemeten waarde; null zolang er geen meting is' }),
+        updated_at: z.string().nullable(),
+      }),
+    ),
+    actuators: z.array(
+      z.object({
+        name: z.string(),
+        values: z.array(z.string()).optional(),
+        state: z.string().nullable().meta({ description: 'Laatst gemelde toestand, bv. on of off; null zolang er geen is' }),
+        updated_at: z.string().nullable(),
+      }),
+    ),
     commands: z.array(z.string()).meta({ description: 'Opdrachten die het toestel begrijpt' }),
   })
   .meta({ example: ketel });

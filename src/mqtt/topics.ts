@@ -4,6 +4,7 @@ export const subscribedTopics = [
   'brouwer/+/sensor/+',
   'brouwer/+/actuator/+/state',
   'brouwer/+/status',
+  'brouwer/+/fout',
 ];
 
 export type ParsedTopic = {

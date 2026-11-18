@@ -44,8 +44,8 @@ test('een info-bericht maakt het toestel aan met alles wat het kan', async () =>
   assert.equal(body.type, 'ketel');
   assert.equal(body.name, 'Brouwketel 1');
   assert.equal(body.firmware, '1.0.0');
-  assert.deepEqual(body.sensors, ketelInfo.sensors);
-  assert.deepEqual(body.actuators, ketelInfo.actuators);
+  assert.deepEqual(body.sensors, [{ name: 'temperatuur', unit: '°C', value: null, updated_at: null }]);
+  assert.deepEqual(body.actuators, [{ name: 'verwarming', values: ['on', 'off'], state: null, updated_at: null }]);
   assert.deepEqual(body.commands, ketelInfo.commands);
   assert.equal(body.online, false, 'zonder statusbericht nog niet online');
 });

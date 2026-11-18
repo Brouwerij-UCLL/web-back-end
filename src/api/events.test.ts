@@ -92,6 +92,37 @@ test('online, offline, een nieuw toestel en verwijderen komen live binnen', asyn
   stroom.sluit();
 });
 
+test('metingen, toestanden en fouten komen live binnen', async () => {
+  const stroom = await verbind();
+  await stroom.volgend(); // snapshot
+
+  handleMessage('brouwer/a4cf12b3c8e0/sensor/temperatuur', '66.8');
+  const meting = await stroom.volgend();
+  assert.equal(meting.event, 'meting');
+  assert.equal(meting.data.mac, 'a4cf12b3c8e0');
+  assert.equal(meting.data.sensor, 'temperatuur');
+  assert.equal(meting.data.value, 66.8);
+  assert.ok(meting.data.at);
+
+  handleMessage('brouwer/a4cf12b3c8e0/actuator/verwarming/state', 'on');
+  const toestand = await stroom.volgend();
+  assert.equal(toestand.event, 'actuator.state');
+  assert.equal(toestand.data.state, 'on');
+
+  handleMessage('brouwer/a4cf12b3c8e0/fout', JSON.stringify({ code: 'DEKSEL', message: 'Deksel staat open' }));
+  const fout = await stroom.volgend();
+  assert.equal(fout.event, 'fout');
+  assert.equal(fout.data.message, 'Deksel staat open');
+  stroom.sluit();
+
+  // Wie later verbindt, ziet de laatste waarden meteen in de snapshot.
+  const later = await verbind();
+  const snapshot = await later.volgend();
+  const ketel = snapshot.data.devices.find((d: { mac: string }) => d.mac === 'a4cf12b3c8e0');
+  assert.equal(ketel.sensors.find((s: { name: string }) => s.name === 'temperatuur').value, 66.8);
+  later.sluit();
+});
+
 test('meerdere browsers krijgen allemaal de updates', async () => {
   const a = await verbind();
   const b = await verbind();
