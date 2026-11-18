@@ -1,5 +1,6 @@
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { docsRouter } from './api/docs.ts';
+import { eventsRouter } from './api/events.ts';
 import { routeGroepen } from './api/index.ts';
 import { HttpFout } from './api/openapi/route.ts';
 import cors, { type CorsOptions, type CorsRequest } from 'cors';
@@ -43,6 +44,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 app.use('/api/docs', docsRouter);
+app.use('/api/events', eventsRouter); // live updates (Server-Sent Events)
 for (const groep of routeGroepen) {
   app.use(groep.mountPath, groep.router);
 }

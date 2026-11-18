@@ -156,6 +156,30 @@ Elk toestel gebruikt zijn MAC-adres als id: 12 hexadecimale tekens in kleine let
 - Een leeg retained bericht op `brouwer/<mac>/info` haalt een toestel definitief weg.
 - Ongeldige berichten (geen MAC-adres, geen JSON, geen `type`) worden gelogd en genegeerd.
 
+### Live updates (Server-Sent Events)
+
+`GET /api/events` is een Server-Sent Events-stroom voor de front-end. Bij het verbinden komt eerst een `snapshot` met alle toestellen, daarna elke wijziging:
+
+| Event | Data |
+|---|---|
+| `snapshot` | `{"devices": [...]}`, zoals `GET /api/devices` |
+| `device.status` | `{"mac", "online", "last_seen"}` |
+| `device.updated` | het volledige toestel, zoals `GET /api/devices/{mac}` |
+| `device.removed` | `{"mac"}` |
+
+Valt de verbinding weg, dan verbindt de browser na 3 s vanzelf opnieuw en krijgt hij een nieuwe snapshot. In Angular:
+
+```ts
+const bron = new EventSource(`${API_BASE_URL}/events`);
+bron.addEventListener('snapshot', (e) => this.devices.set(JSON.parse(e.data).devices));
+bron.addEventListener('device.status', (e) => {
+  const { mac, online, last_seen } = JSON.parse(e.data);
+  this.devices.update((lijst) => lijst.map((d) => (d.mac === mac ? { ...d, online, last_seen } : d)));
+});
+```
+
+Op Vercel werkt dit niet: een serverless functie houdt geen verbinding open. De live updates hebben de back-end op een server nodig die blijft aanstaan.
+
 ## Database (SQLite)
 
 De back-end gebruikt SQLite via de in Node ingebouwde module `node:sqlite`. Je hoeft niets apart te installeren of te starten; `npm start` en `npm run dev` openen de database automatisch.
