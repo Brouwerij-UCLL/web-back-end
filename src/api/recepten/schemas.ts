@@ -472,3 +472,16 @@ export const FermentationSchedule = z
     ),
   })
   .meta({ example: fermentationScheduleExample });
+
+// ----- Vergistbare ingrediënten (moutstort) van een recept -----
+// Een ingrediënt komt uit de catalogus (ingredient_id), de hoeveelheid is in gram: dezelfde regels als
+// ingredients in PUT /api/recipes. Antwoorden hebben hetzelfde formaat als GET /api/recipes/{id}/ingredients.
+
+export const FermentableParams = z
+  .object({
+    id: z.coerce.number().int().positive().meta({ description: 'Id van het recept', example: 2 }),
+    ingredientId: z.coerce.number().int().positive().meta({ description: 'Id van het ingrediënt in de catalogus', example: 1 }),
+  })
+  .meta({ example: { id: 2, ingredientId: 1 } });
+
+export const FermentableInput = ingredientInput.meta({ example: { ingredient_id: 1, amount_g: 5500 } });

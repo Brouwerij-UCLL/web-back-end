@@ -66,7 +66,7 @@ function schrijfOnderdelen(receptId: number, recept: RecipeInput): void {
 }
 
 // Voert alles uit in één transactie: lukt een stap niet, dan blijft er niets achter.
-function inTransactie<T>(werk: () => T): T {
+export function inTransactie<T>(werk: () => T): T {
   db.exec('BEGIN');
   try {
     const resultaat = werk();
