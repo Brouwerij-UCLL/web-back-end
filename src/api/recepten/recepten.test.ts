@@ -70,11 +70,11 @@ test('AC2: filteren en sorteren werkt; ongeldige waarden geven 400', async () =>
 test('AC3-4, AC8: wijzigen valideert alle velden en past de wijzigingstijd aan', async () => {
   const id = maakRecept('Te wijzigen', 'Oud', 15);
   const sessieId = Number(db.prepare(`
-    INSERT INTO brouwsessies (recept_id, recept_naam, doel_volume_liter, schaalfactor, status)
+    INSERT INTO brew_sessions (recipe_id, recipe_name, target_volume_l, scale_factor, status)
     VALUES (?, 'Recept snapshot', 15, 1, 'voltooid')
   `).run(id).lastInsertRowid);
   db.prepare(`
-    INSERT INTO brouwsessie_stappen (sessie_id, stap_type, stap_volgorde, naam, status)
+    INSERT INTO brew_session_steps (brew_session_id, step_type, step_order, name, status)
     VALUES (?, 'maischen', 1, 'Snapshot maischen', 'voltooid')
   `).run(sessieId);
   const original = await vraag('GET', `/${id}`);
@@ -102,10 +102,10 @@ test('AC3-4, AC8: wijzigen valideert alle velden en past de wijzigingstijd aan',
     assert.match(response.body.fout, new RegExp(field));
   }
   assert.equal((await vraag('GET', `/${id}`)).body.name, body.name);
-  const session = db.prepare('SELECT recept_id, recept_naam FROM brouwsessies WHERE id = ?').get(sessieId) as { recept_id: number; recept_naam: string };
-  assert.equal(session.recept_id, id);
-  assert.equal(session.recept_naam, 'Recept snapshot');
-  assert.equal((db.prepare('SELECT naam FROM brouwsessie_stappen WHERE sessie_id = ?').get(sessieId) as { naam: string }).naam, 'Snapshot maischen');
+  const session = db.prepare('SELECT recipe_id, recipe_name FROM brew_sessions WHERE id = ?').get(sessieId) as { recipe_id: number; recipe_name: string };
+  assert.equal(session.recipe_id, id);
+  assert.equal(session.recipe_name, 'Recept snapshot');
+  assert.equal((db.prepare('SELECT name FROM brew_session_steps WHERE brew_session_id = ?').get(sessieId) as { name: string }).name, 'Snapshot maischen');
   assert.equal((await vraag('PUT', '/99999', body)).status, 404);
 });
 
@@ -116,17 +116,17 @@ test('AC5-7: verwijderen wist receptonderdelen, bewaart sessiehistoriek en blokk
   const ingrediëntId = Number(db.prepare("INSERT INTO ingredients (name) VALUES ('Testmout')").run().lastInsertRowid);
   db.prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, amount_g) VALUES (?, ?, 1000)').run(id, ingrediëntId);
   const sessieId = Number(db.prepare(`
-    INSERT INTO brouwsessies (recept_id, recept_naam, doel_volume_liter, schaalfactor, status)
+    INSERT INTO brew_sessions (recipe_id, recipe_name, target_volume_l, scale_factor, status)
     VALUES (?, 'Recept snapshot', 20, 1, 'voltooid')
   `).run(id).lastInsertRowid);
   db.prepare(`
-    INSERT INTO brouwsessie_stappen (sessie_id, stap_type, stap_volgorde, naam, status)
+    INSERT INTO brew_session_steps (brew_session_id, step_type, step_order, name, status)
     VALUES (?, 'maischen', 1, 'Maischen', 'voltooid')
   `).run(sessieId);
 
   const lopendId = maakRecept('Lopende batch', 'Pils');
   db.prepare(`
-    INSERT INTO brouwsessies (recept_id, recept_naam, doel_volume_liter, schaalfactor, status)
+    INSERT INTO brew_sessions (recipe_id, recipe_name, target_volume_l, scale_factor, status)
     VALUES (?, 'Lopende batch', 20, 1, 'bezig')
   `).run(lopendId);
   assert.equal((await vraag('DELETE', `/${lopendId}`)).status, 409);
@@ -139,9 +139,9 @@ test('AC5-7: verwijderen wist receptonderdelen, bewaart sessiehistoriek en blokk
   assert.equal((db.prepare('SELECT count(*) AS aantal FROM recipe_water WHERE recipe_id = ?').get(id) as { aantal: number }).aantal, 0);
   assert.equal((db.prepare('SELECT count(*) AS aantal FROM recipe_ingredients WHERE recipe_id = ?').get(id) as { aantal: number }).aantal, 0);
   assert.equal((db.prepare('SELECT count(*) AS aantal FROM recipe_mash_steps WHERE recipe_id = ?').get(id) as { aantal: number }).aantal, 0);
-  const sessie = db.prepare('SELECT recept_id, recept_naam FROM brouwsessies WHERE id = ?').get(sessieId) as { recept_id: number | null; recept_naam: string };
-  assert.equal(sessie.recept_id, null);
-  assert.equal(sessie.recept_naam, 'Recept snapshot');
-  assert.equal((db.prepare('SELECT count(*) AS aantal FROM brouwsessie_stappen WHERE sessie_id = ?').get(sessieId) as { aantal: number }).aantal, 1);
+  const sessie = db.prepare('SELECT recipe_id, recipe_name FROM brew_sessions WHERE id = ?').get(sessieId) as { recipe_id: number | null; recipe_name: string };
+  assert.equal(sessie.recipe_id, null);
+  assert.equal(sessie.recipe_name, 'Recept snapshot');
+  assert.equal((db.prepare('SELECT count(*) AS aantal FROM brew_session_steps WHERE brew_session_id = ?').get(sessieId) as { aantal: number }).aantal, 1);
   assert.equal((await vraag('DELETE', '/99999')).status, 404);
 });

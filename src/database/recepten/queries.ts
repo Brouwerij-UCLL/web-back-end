@@ -153,9 +153,9 @@ export function deleteRecipe(id: number): 'deleted' | 'active_session' | 'not_fo
     DELETE FROM recipes
     WHERE recipe_id = ?
       AND NOT EXISTS (
-        SELECT 1 FROM brouwsessies
-        WHERE brouwsessies.recept_id = recipes.recipe_id
-          AND brouwsessies.status = 'bezig'
+        SELECT 1 FROM brew_sessions
+        WHERE brew_sessions.recipe_id = recipes.recipe_id
+          AND brew_sessions.status = 'bezig'
       )
   `).run(id);
   if (resultaat.changes > 0) return 'deleted';
