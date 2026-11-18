@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { after, before, describe, test } from 'node:test';
 
 // Vergistbare ingrediënten (moutstort) van een recept: /api/recipes/{id}/fermentables.
+// Body { ingredient_id, amount_g }: het ingrediënt komt uit de catalogus, de hoeveelheid is in gram.
 // Op een tijdelijke database in het geheugen met de mockdata uit de migraties.
 process.env.DATABASE_FILE = ':memory:';
 const { app } = await import('../../app.ts');
@@ -42,8 +43,11 @@ function foutmelding(antwoord: { status: number; body: any }, status: number): s
 const aantal = (sql: string, ...waarden: number[]) => (db.prepare(sql).get(...waarden) as { n: number }).n;
 const catalogus = () => aantal('SELECT count(*) AS n FROM ingredients');
 
+type Regel = { ingredient_id: number; name: string; manufacturer: string | null; amount_g: number };
+
 // Een eigen recept per test, met ingrediënten uit de catalogus van de mockdata:
-// 7 CaraPils (0.2 kg), 1 Pilsner Malt (5.5 kg) en 3 Wheat Malt (0.8 kg), in die volgorde.
+// 7 CaraPils (200 g), 1 Pilsner Malt (5500 g) en 3 Wheat Malt (800 g), in die volgorde.
+// Vrij in de catalogus: 2 Pale Ale Malt, 4 Flaked Oats, 5 Munich Malt.
 async function nieuwRecept(): Promise<number> {
   const { status, body } = await vraag('POST', '', {
     name: 'Moutstort-test',
@@ -58,51 +62,50 @@ async function nieuwRecept(): Promise<number> {
   return body.id;
 }
 
-async function lijst(receptId: number) {
+async function lijst(receptId: number): Promise<Regel[]> {
   const { status, body } = await vraag('GET', `/${receptId}/fermentables`);
   assert.equal(status, 200);
-  return body as { ingredient_id: number; name: string; manufacturer: string | null; amount_kg: number }[];
+  return body;
 }
 
 const ids = async (receptId: number) => (await lijst(receptId)).map((f) => f.ingredient_id);
 
 describe('AC0: ingrediënt toevoegen', () => {
-  test('POST met een nieuwe naam geeft 201 en het ingrediënt met een nieuw id', async () => {
+  test('POST met een ingrediënt uit de catalogus geeft 201 en het ingrediënt met naam, fabrikant en hoeveelheid', async () => {
     const id = await nieuwRecept();
-    const voor = catalogus();
 
-    const { status, body } = await vraag('POST', `/${id}/fermentables`, { name: 'Haver', manufacturer: 'Weyermann', amount_kg: 0.3 });
+    const { status, body } = await vraag('POST', `/${id}/fermentables`, { ingredient_id: 2, amount_g: 300 });
 
     assert.equal(status, 201);
-    assert.ok(Number.isInteger(body.ingredient_id));
-    assert.deepEqual(body, { ingredient_id: body.ingredient_id, name: 'Haver', manufacturer: 'Weyermann', amount_kg: 0.3 });
-    assert.equal(catalogus(), voor + 1, 'het ingrediënt is aan de catalogus toegevoegd');
+    assert.deepEqual(body, { ingredient_id: 2, name: 'Pale Ale Malt', manufacturer: 'Crisp', amount_g: 300 });
     assert.deepEqual((await lijst(id)).at(-1), body);
   });
 
-  test('de fabrikant is optioneel', async () => {
-    const id = await nieuwRecept();
-    const { status, body } = await vraag('POST', `/${id}/fermentables`, { name: 'Rijstvlokken', amount_kg: 0.5 });
-    assert.equal(status, 201);
-    assert.equal(body.manufacturer, null);
-  });
-
-  test('een ingrediënt dat al in de catalogus staat, wordt hergebruikt (hoofdletters niet meegerekend)', async () => {
+  test('vanuit een recept wordt nooit een ingrediënt in de catalogus aangemaakt', async () => {
     const id = await nieuwRecept();
     const voor = catalogus();
 
-    const { status, body } = await vraag('POST', `/${id}/fermentables`, { name: 'pale ale malt', manufacturer: 'CRISP', amount_kg: 1.1 });
+    await vraag('POST', `/${id}/fermentables`, { ingredient_id: 4, amount_g: 300 });
+    await vraag('POST', `/${id}/fermentables`, { ingredient_id: 9999, amount_g: 300 });
 
-    assert.equal(status, 201);
-    assert.deepEqual(body, { ingredient_id: 2, name: 'Pale Ale Malt', manufacturer: 'Crisp', amount_kg: 1.1 });
-    assert.equal(catalogus(), voor, 'geen dubbel ingrediënt in de catalogus');
+    assert.equal(catalogus(), voor);
+  });
+
+  test('een ingrediënt dat niet in de catalogus staat, geeft 400 en er verandert niets', async () => {
+    const id = await nieuwRecept();
+    const voor = await lijst(id);
+
+    const antwoord = await vraag('POST', `/${id}/fermentables`, { ingredient_id: 9999, amount_g: 300 });
+
+    assert.match(foutmelding(antwoord, 400), /ingrediënt 9999 bestaat niet/);
+    assert.deepEqual(await lijst(id), voor);
   });
 
   test('een ingrediënt dat al in het recept zit, geeft 409 en er verandert niets', async () => {
     const id = await nieuwRecept();
     const voor = await lijst(id);
 
-    const antwoord = await vraag('POST', `/${id}/fermentables`, { name: 'CaraPils', manufacturer: 'Dingemans', amount_kg: 1 });
+    const antwoord = await vraag('POST', `/${id}/fermentables`, { ingredient_id: 7, amount_g: 1000 });
 
     foutmelding(antwoord, 409);
     assert.deepEqual(await lijst(id), voor);
@@ -112,21 +115,30 @@ describe('AC0: ingrediënt toevoegen', () => {
 describe('AC1: lijst opvragen', () => {
   test('GET geeft alle ingrediënten met naam, fabrikant en hoeveelheid, in de volgorde waarin ze zijn toegevoegd', async () => {
     const id = await nieuwRecept();
-    await vraag('POST', `/${id}/fermentables`, { name: 'Haver', amount_kg: 9 });
+    await vraag('POST', `/${id}/fermentables`, { ingredient_id: 4, amount_g: 9000 });
 
-    // Niet gesorteerd op hoeveelheid (Haver is de grootste) maar in de volgorde van toevoegen.
+    // Niet gesorteerd op hoeveelheid (Flaked Oats is de grootste) maar in de volgorde van toevoegen.
     assert.deepEqual(await lijst(id), [
-      { ingredient_id: 7, name: 'CaraPils', manufacturer: 'Dingemans', amount_kg: 0.2 },
-      { ingredient_id: 1, name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_kg: 5.5 },
-      { ingredient_id: 3, name: 'Wheat Malt (Tarwemout)', manufacturer: 'Dingemans', amount_kg: 0.8 },
-      { ingredient_id: (await lijst(id))[3]!.ingredient_id, name: 'Haver', manufacturer: null, amount_kg: 9 },
+      { ingredient_id: 7, name: 'CaraPils', manufacturer: 'Dingemans', amount_g: 200 },
+      { ingredient_id: 1, name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_g: 5500 },
+      { ingredient_id: 3, name: 'Wheat Malt (Tarwemout)', manufacturer: 'Dingemans', amount_g: 800 },
+      { ingredient_id: 4, name: 'Flaked Oats (Havervlokken)', manufacturer: 'Thomas Fawcett', amount_g: 9000 },
     ]);
   });
 
-  test('GET /ingredients geeft dezelfde volgorde', async () => {
+  test('GET /ingredients geeft hetzelfde formaat, op grootste hoeveelheid eerst', async () => {
     const id = await nieuwRecept();
-    const { body } = await vraag('GET', `/${id}/ingredients`);
-    assert.deepEqual(body.map((r: { ingredient_id: number }) => r.ingredient_id), [7, 1, 3]);
+    await vraag('POST', `/${id}/fermentables`, { ingredient_id: 4, amount_g: 9000 });
+
+    const { status, body } = await vraag('GET', `/${id}/ingredients`);
+
+    assert.equal(status, 200);
+    assert.deepEqual(body.map((r: Regel) => r.ingredient_id), [4, 1, 3, 7]);
+    assert.deepEqual(
+      [...body].sort((a: Regel, b: Regel) => a.ingredient_id - b.ingredient_id),
+      [...(await lijst(id))].sort((a, b) => a.ingredient_id - b.ingredient_id),
+      'dezelfde ingrediënten, velden en eenheid',
+    );
   });
 
   test('een recept zonder ingrediënten geeft een lege lijst', async () => {
@@ -138,7 +150,7 @@ describe('AC1: lijst opvragen', () => {
     const id = await nieuwRecept();
     const { status, body } = await vraag('GET', `/${id}/fermentables/1`);
     assert.equal(status, 200);
-    assert.deepEqual(body, { ingredient_id: 1, name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_kg: 5.5 });
+    assert.deepEqual(body, { ingredient_id: 1, name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_g: 5500 });
   });
 });
 
@@ -147,34 +159,41 @@ describe('AC2: ingrediënt wijzigen', () => {
     const id = await nieuwRecept();
     const voor = await lijst(id);
 
-    const { status, body } = await vraag('PUT', `/${id}/fermentables/1`, { name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_kg: 6 });
+    const { status, body } = await vraag('PUT', `/${id}/fermentables/1`, { ingredient_id: 1, amount_g: 6000 });
 
     assert.equal(status, 200);
-    assert.deepEqual(body, { ingredient_id: 1, name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_kg: 6 });
-    assert.deepEqual(await lijst(id), voor.map((f) => (f.ingredient_id === 1 ? { ...f, amount_kg: 6 } : f)));
+    assert.deepEqual(body, { ingredient_id: 1, name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_g: 6000 });
+    assert.deepEqual(await lijst(id), voor.map((f) => (f.ingredient_id === 1 ? { ...f, amount_g: 6000 } : f)));
   });
 
-  test('PUT met een andere naam verwijst naar dat ingrediënt; de catalogus en andere recepten blijven ongewijzigd', async () => {
+  test('PUT met een ander ingredient_id vervangt het ingrediënt op dezelfde plaats; andere recepten blijven ongewijzigd', async () => {
     const id = await nieuwRecept();
     const ander = await nieuwRecept();
     const anderVoor = await lijst(ander);
 
-    const { status, body } = await vraag('PUT', `/${id}/fermentables/3`, { name: 'Spelt', manufacturer: 'Weyermann', amount_kg: 0.4 });
+    const { status, body } = await vraag('PUT', `/${id}/fermentables/3`, { ingredient_id: 5, amount_g: 700 });
 
     assert.equal(status, 200);
-    assert.equal(body.name, 'Spelt');
-    assert.notEqual(body.ingredient_id, 3);
-    assert.deepEqual(await ids(id), [7, 1, body.ingredient_id], 'op dezelfde plaats in de lijst');
+    assert.deepEqual(body, { ingredient_id: 5, name: 'Munich Malt', manufacturer: 'Weyermann', amount_g: 700 });
+    assert.deepEqual(await ids(id), [7, 1, 5], 'op dezelfde plaats in de lijst');
     assert.deepEqual(await lijst(ander), anderVoor);
-    const tarwemout = db.prepare('SELECT name FROM ingredients WHERE ingredient_id = 3').get() as { name: string };
-    assert.equal(tarwemout.name, 'Wheat Malt (Tarwemout)');
+  });
+
+  test('PUT naar een ingrediënt dat niet in de catalogus staat, geeft 400 en er verandert niets', async () => {
+    const id = await nieuwRecept();
+    const voor = await lijst(id);
+
+    const antwoord = await vraag('PUT', `/${id}/fermentables/3`, { ingredient_id: 9999, amount_g: 700 });
+
+    assert.match(foutmelding(antwoord, 400), /ingrediënt 9999 bestaat niet/);
+    assert.deepEqual(await lijst(id), voor);
   });
 
   test('PUT naar een ingrediënt dat al in het recept zit, geeft 409 en er verandert niets', async () => {
     const id = await nieuwRecept();
     const voor = await lijst(id);
 
-    const antwoord = await vraag('PUT', `/${id}/fermentables/3`, { name: 'CaraPils', manufacturer: 'Dingemans', amount_kg: 1 });
+    const antwoord = await vraag('PUT', `/${id}/fermentables/3`, { ingredient_id: 7, amount_g: 1000 });
 
     foutmelding(antwoord, 409);
     assert.deepEqual(await lijst(id), voor);
@@ -198,12 +217,13 @@ describe('AC3: ingrediënt verwijderen', () => {
 
 describe('AC4: ongeldig ingrediënt', () => {
   const gevallen: [string, unknown, RegExp][] = [
-    ['zonder naam', { amount_kg: 1 }, /name: naam is verplicht/],
-    ['met een lege naam', { name: '   ', amount_kg: 1 }, /name: naam is verplicht/],
-    ['met hoeveelheid 0', { name: 'Rogge', amount_kg: 0 }, /amount_kg: /],
-    ['met een negatieve hoeveelheid', { name: 'Rogge', amount_kg: -2 }, /amount_kg: /],
-    ['met een hoeveelheid die geen getal is', { name: 'Rogge', amount_kg: 'veel' }, /amount_kg: /],
-    ['zonder hoeveelheid', { name: 'Rogge' }, /amount_kg: /],
+    ['zonder ingrediënt', { amount_g: 500 }, /ingredient_id/],
+    ['met een naam in plaats van een id', { name: 'Pilsner Malt', amount_g: 500 }, /ingredient_id/],
+    ['met hoeveelheid 0', { ingredient_id: 4, amount_g: 0 }, /amount_g: hoeveelheid moet groter zijn dan 0 g/],
+    ['met een negatieve hoeveelheid', { ingredient_id: 4, amount_g: -2 }, /amount_g: hoeveelheid moet groter zijn dan 0 g/],
+    ['met een hoeveelheid die geen getal is', { ingredient_id: 4, amount_g: 'veel' }, /amount_g/],
+    ['zonder hoeveelheid', { ingredient_id: 4 }, /amount_g/],
+    ['met de hoeveelheid in kg in plaats van gram', { ingredient_id: 4, amount_kg: 1 }, /amount_g/],
   ];
 
   for (const [omschrijving, body, veld] of gevallen) {
@@ -219,41 +239,39 @@ describe('AC4: ongeldig ingrediënt', () => {
 
     test(`PUT ${omschrijving} geeft 400 met het veld in de foutmelding, en er wordt niets gewijzigd`, async () => {
       const id = await nieuwRecept();
-      const [voor, voorCatalogus] = [await lijst(id), catalogus()];
+      const voor = await lijst(id);
 
       assert.match(foutmelding(await vraag('PUT', `/${id}/fermentables/1`, body), 400), veld);
 
       assert.deepEqual(await lijst(id), voor);
-      assert.equal(catalogus(), voorCatalogus);
     });
   }
 });
 
 describe('AC5: onbestaand recept of ingrediënt, of ingrediënt van een ander recept', () => {
-  const geldig = { name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_kg: 1 };
+  const geldig = { ingredient_id: 1, amount_g: 1000 };
 
   test('een recept dat niet bestaat, geeft 404 bij opvragen, toevoegen, wijzigen en verwijderen, en er verandert niets', async () => {
-    const [voorRegels, voorCatalogus] = [aantal('SELECT count(*) AS n FROM recipe_ingredients'), catalogus()];
+    const voor = aantal('SELECT count(*) AS n FROM recipe_ingredients');
 
     for (const [methode, pad, body] of [
       ['GET', '/9999/fermentables'],
       ['GET', '/9999/fermentables/1'],
-      ['POST', '/9999/fermentables', { name: 'Nieuw ingrediënt', amount_kg: 1 }],
+      ['POST', '/9999/fermentables', geldig],
       ['PUT', '/9999/fermentables/1', geldig],
       ['DELETE', '/9999/fermentables/1'],
     ] as const) {
       assert.match(foutmelding(await vraag(methode, pad, body), 404), /recept 9999/, `${methode} ${pad}`);
     }
-    assert.equal(aantal('SELECT count(*) AS n FROM recipe_ingredients'), voorRegels);
-    assert.equal(catalogus(), voorCatalogus, 'geen nieuw catalogus-ingrediënt bij een onbestaand recept');
+    assert.equal(aantal('SELECT count(*) AS n FROM recipe_ingredients'), voor);
   });
 
-  test('een ingrediënt dat niet bestaat, geeft 404 bij opvragen, wijzigen en verwijderen', async () => {
+  test('een ingrediënt dat niet in het recept zit, geeft 404 bij opvragen, wijzigen en verwijderen', async () => {
     const id = await nieuwRecept();
     const voor = await lijst(id);
 
-    for (const [methode, body] of [['GET'], ['PUT', geldig], ['DELETE']] as const) {
-      assert.match(foutmelding(await vraag(methode, `/${id}/fermentables/9999`, body), 404), /9999/, methode);
+    for (const [methode, body] of [['GET'], ['PUT', { ingredient_id: 2, amount_g: 100 }], ['DELETE']] as const) {
+      assert.match(foutmelding(await vraag(methode, `/${id}/fermentables/2`, body), 404), /ingrediënt 2 zit niet in recept/, methode);
     }
     assert.deepEqual(await lijst(id), voor);
   });
@@ -261,11 +279,11 @@ describe('AC5: onbestaand recept of ingrediënt, of ingrediënt van een ander re
   test('een ingrediënt van een ander recept geeft 404, en geen van beide recepten verandert', async () => {
     const id = await nieuwRecept();
     const ander = await nieuwRecept();
-    const { body: haver } = await vraag('POST', `/${ander}/fermentables`, { name: 'Haver', amount_kg: 1 });
+    await vraag('POST', `/${ander}/fermentables`, { ingredient_id: 4, amount_g: 1000 });
     const [voor, anderVoor] = [await lijst(id), await lijst(ander)];
 
-    for (const [methode, body] of [['GET'], ['PUT', { name: 'Haver', amount_kg: 2 }], ['DELETE']] as const) {
-      foutmelding(await vraag(methode, `/${id}/fermentables/${haver.ingredient_id}`, body), 404);
+    for (const [methode, body] of [['GET'], ['PUT', { ingredient_id: 4, amount_g: 2000 }], ['DELETE']] as const) {
+      foutmelding(await vraag(methode, `/${id}/fermentables/4`, body), 404);
     }
     assert.deepEqual(await lijst(id), voor);
     assert.deepEqual(await lijst(ander), anderVoor);
@@ -275,7 +293,7 @@ describe('AC5: onbestaand recept of ingrediënt, of ingrediënt van een ander re
 describe('AC6: recept verwijderen', () => {
   test('de vergistbare ingrediënten van het recept worden mee verwijderd; de catalogus blijft', async () => {
     const id = await nieuwRecept();
-    await vraag('POST', `/${id}/fermentables`, { name: 'Haver', amount_kg: 1 });
+    await vraag('POST', `/${id}/fermentables`, { ingredient_id: 4, amount_g: 1000 });
     const voor = catalogus();
 
     assert.equal((await vraag('DELETE', `/${id}`)).status, 204);
