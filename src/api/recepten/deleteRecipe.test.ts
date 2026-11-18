@@ -43,6 +43,7 @@ const aantal = (tabel: string, recipeId?: number) =>
 
 const volledigRecept = {
   name: 'Te verwijderen tripel',
+  recept_volume: 20,
   beer_style: 'Belgische Tripel',
   water: { mash_water_l: 20, sparge_water_l: 14 },
   ingredients: [{ ingredient_id: 1, amount_g: 5500 }],
@@ -100,7 +101,7 @@ test('onbestaand recept geeft 404 en verandert niets', async () => {
 });
 
 test('twee keer verwijderen geeft de tweede keer 404', async () => {
-  const { body: recept } = await vraag('POST', '', { name: 'Eenmalig' });
+  const { body: recept } = await vraag('POST', '', { name: 'Eenmalig', recept_volume: 20 });
   assert.equal((await vraag('DELETE', `/${recept.id}`)).status, 204);
   assert.equal((await vraag('DELETE', `/${recept.id}`)).status, 404);
 });

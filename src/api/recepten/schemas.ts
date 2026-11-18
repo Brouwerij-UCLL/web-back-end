@@ -1,10 +1,15 @@
 import { z } from 'zod';
+import { config } from '../../config.ts';
+
+// Maximale capaciteit van de brouwketel (MAX_VOLUME_LITER in .env): bovengrens voor elk volume in liter.
+const maxLiter = config.maxVolumeLiter;
 
 const tripelSummary = {
   id: 2,
   name: 'Gouden Tripel',
   beer_style: 'Belgische Tripel',
   description: 'Klassieke krachtige blondine met fruitige esters en een volle, warme afdronk.',
+  recept_volume: 20,
 };
 
 const pilsnerMalt = { ingredient_id: 1, name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_g: 5500 };
@@ -64,6 +69,15 @@ export const ReceptIdParams = z
   })
   .meta({ example: { id: 2 } });
 
+export const RecipesQuery = z
+  .object({
+    orderBy: z
+      .enum(['asc', 'desc'], { error: 'orderBy moet asc of desc zijn' })
+      .default('asc')
+      .meta({ description: 'Volgorde op naam: asc = A tot Z (standaard), desc = Z tot A', example: 'desc' }),
+  })
+  .meta({ example: { orderBy: 'desc' } });
+
 // ----- Antwoorden -----
 
 const summaryFields = {
@@ -71,6 +85,7 @@ const summaryFields = {
   name: z.string(),
   beer_style: z.string().nullable(),
   description: z.string().nullable(),
+  recept_volume: z.number().meta({ description: 'Volume van het recept in liter' }),
 };
 
 export const RecipeSummary = z.object(summaryFields).meta({ example: tripelSummary });
@@ -230,7 +245,7 @@ const extraInput = z
 
 const mashStepInput = z
   .object({
-    temperature_c: z.number().min(20, 'temperatuur moet tussen 20 en 80 °C liggen').max(80, 'temperatuur moet tussen 20 en 80 °C liggen'),
+    temperature_c: z.number().min(20, 'temperatuur moet tussen 20 en 80 °C liggen').max(120, 'temperatuur moet tussen 20 en 80 °C liggen'),
     duration_min: z.number().int().min(1, 'duur moet tussen 1 en 240 minuten liggen').max(240, 'duur moet tussen 1 en 240 minuten liggen'),
   })
   .strict();
@@ -256,6 +271,7 @@ const recipeInputExample = {
   name: 'Gouden Tripel',
   beer_style: 'Belgische Tripel',
   description: 'Klassieke krachtige blondine met fruitige esters en een volle, warme afdronk.',
+  recept_volume: 20,
   water: { mash_water_l: 20, sparge_water_l: 14 },
   ingredients: [
     { ingredient_id: 1, amount_g: 5500 },
@@ -280,10 +296,21 @@ export const RecipeInput = z
     name: z.string().trim().min(1, 'naam is verplicht').max(100, 'naam mag maximaal 100 tekens lang zijn'),
     beer_style: optionalText(50, 'bierstijl'),
     description: optionalText(1000, 'beschrijving'),
+    recept_volume: z
+      .number({ error: 'volume is verplicht en moet een getal zijn' })
+      .positive('volume moet groter zijn dan 0 liter')
+      .max(maxLiter, `volume mag maximaal ${maxLiter} liter zijn`)
+      .meta({ description: `Volume van het recept in liter, groter dan 0 en hoogstens ${maxLiter}` }),
     water: z
       .object({
-        mash_water_l: z.number().positive('maischwater moet groter zijn dan 0 liter').max(500),
-        sparge_water_l: z.number().min(0, 'spoelwater mag niet negatief zijn').max(500),
+        mash_water_l: z
+          .number()
+          .positive('maischwater moet groter zijn dan 0 liter')
+          .max(maxLiter, `maischwater mag maximaal ${maxLiter} liter zijn`),
+        sparge_water_l: z
+          .number()
+          .min(0, 'spoelwater mag niet negatief zijn')
+          .max(maxLiter, `spoelwater mag maximaal ${maxLiter} liter zijn`),
       })
       .strict()
       .nullable()
@@ -335,7 +362,7 @@ const MashStepInput = z.object({
   temperature: z
     .number({ error: stepError('temperature ontbreekt of is geen getal') })
     .min(20, { error: stepError('temperature moet tussen 20 en 80 °C liggen') })
-    .max(80, { error: stepError('temperature moet tussen 20 en 80 °C liggen') })
+    .max(120, { error: stepError('temperature moet tussen 20 en 80 °C liggen') })
     .meta({ description: 'Temperatuur in °C, van 20 tot en met 80' }),
   duration: z
     .number({ error: stepError('duration ontbreekt of is geen getal') })
@@ -376,13 +403,13 @@ export const WaterInput = z
     mash_water_l: z
       .number({ error: 'mash_water_l ontbreekt of is geen getal' })
       .positive({ error: 'mash_water_l moet groter zijn dan 0 liter' })
-      .max(500, { error: 'mash_water_l mag maximaal 500 liter zijn' })
-      .meta({ description: 'Maischwater in liter, groter dan 0' }),
+      .max(maxLiter, { error: `mash_water_l mag maximaal ${maxLiter} liter zijn` })
+      .meta({ description: `Maischwater in liter, groter dan 0 en hoogstens ${maxLiter}` }),
     sparge_water_l: z
       .number({ error: 'sparge_water_l ontbreekt of is geen getal' })
       .min(0, { error: 'sparge_water_l mag niet negatief zijn' })
-      .max(500, { error: 'sparge_water_l mag maximaal 500 liter zijn' })
-      .meta({ description: 'Spoelwater in liter; 0 als er niet gespoeld wordt' }),
+      .max(maxLiter, { error: `sparge_water_l mag maximaal ${maxLiter} liter zijn` })
+      .meta({ description: `Spoelwater in liter, hoogstens ${maxLiter}; 0 als er niet gespoeld wordt` }),
   })
   .strict()
   .meta({ example: waterExample });

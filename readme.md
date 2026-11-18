@@ -49,7 +49,7 @@ migrations/         SQL-migraties (001_..., 002_...)
 src/
   server.ts         lokaal startpunt: MQTT en webserver starten
   app.ts            de Express-app: migraties, middleware en routers (startpunt op Vercel)
-  config.ts         instellingen uit .env (PORT, DATABASE_FILE, MQTT_URL, CORS_ORIGINS)
+  config.ts         instellingen uit .env (PORT, DATABASE_FILE, MQTT_*, CORS_ORIGINS, MAX_VOLUME_LITER)
   api/              REST-endpoints
     index.ts        lijst van alle groepen endpoints
     docs.ts         Swagger UI op /api/docs
@@ -121,6 +121,32 @@ recepten.route({
 - **Klopt altijd:** wijkt het antwoord van een handler af van het schema, dan geeft de back-end een 500 in plaats van ongedocumenteerde data.
 - **Controle:** `npm test` controleert dat elk endpoint een beschrijving, groep, voorbeelden en het gedeelde foutschema heeft, en roept elk GET-endpoint aan met de voorbeeldwaarden.
 
+## MQTT-broker
+
+De back-end, ketel en kast communiceren via een [Mosquitto](https://mosquitto.org)-broker. Mosquitto ondersteunt MQTT 3.1, 3.1.1 én 5.0 tegelijk, dus elke client mag zijn eigen versie gebruiken (ESP32/PubSubClient op 3.1.1, MQTTX op 5.0). De back-end verbindt met `MQTT_URL` (standaard `mqtt://localhost:1883`).
+
+**Lokaal (Windows)**
+
+1. Installeer Mosquitto: `winget install EclipseFoundation.Mosquitto` of de installer van [mosquitto.org/download](https://mosquitto.org/download/). Het draait daarna als Windows-dienst op poort 1883.
+2. Standaard aanvaardt Mosquitto alleen verbindingen van de eigen pc. Moeten toestellen in het netwerk verbinden, voeg dan in `C:\Program Files\mosquitto\mosquitto.conf` toe:
+   ```
+   listener 1883 0.0.0.0
+   allow_anonymous true
+   ```
+   en herstart de dienst (`Restart-Service mosquitto` als administrator).
+3. `npm start`: de back-end verbindt met `mqtt://localhost:1883`.
+
+**Login aanzetten**
+
+Maak een wachtwoordbestand met `mosquitto_passwd -c <bestand> <gebruiker>`, zet in `mosquitto.conf` `allow_anonymous false` en `password_file <bestand>`, en vul dezelfde gebruiker in `MQTT_USERNAME` en `MQTT_PASSWORD` in `.env` in.
+
+**Server**
+
+De Proxmox-installatie in [Brouwerij-UCLL/brouwapp-deploy](https://github.com/Brouwerij-UCLL/brouwapp-deploy) installeert Mosquitto naast de back-end en maakt de login automatisch aan uit `MQTT_USERNAME` en `MQTT_PASSWORD`.
+
+- Adres voor de toestellen: het IP-adres van de pc of server met Mosquitto, poort 1883.
+- Op Vercel draait geen broker: de toestellen hebben een server nodig die blijft aanstaan.
+
 ## Database (SQLite)
 
 De back-end gebruikt SQLite via de in Node ingebouwde module `node:sqlite`. Je hoeft niets apart te installeren of te starten; `npm start` en `npm run dev` openen de database automatisch.
@@ -137,7 +163,7 @@ Sinds migratie 003 gebruikt de database Engelse tabel- en kolomnamen. De API geb
 
 | Tabel | Inhoud |
 |---|---|
-| `recipes` | naam, bierstijl, beschrijving, aanmaak- en wijzigingstijd |
+| `recipes` | naam, bierstijl, beschrijving, volume in liter (`recept_volume`), aanmaak- en wijzigingstijd |
 | `ingredients`, `hops`, `extra_ingredients` | catalogi die recepten delen (een hop of mout bestaat één keer) |
 | `recipe_ingredients` | vergistbare ingrediënten per recept, hoeveelheid in gram |
 | `hop_additions` | hopgiften per recept: hoeveelheid en kooktijd; dezelfde hop kan meerdere keren |
@@ -174,6 +200,18 @@ Voor de gedeployde front-end zet je op Vercel bv.:
 ```
 CORS_ORIGINS=http://localhost:4200,https://<front-end>.vercel.app
 ```
+
+### Maximale capaciteit van de brouwketel
+
+`MAX_VOLUME_LITER` in `.env` is de capaciteit van de brouwketel in liter, standaard `100` (`src/config.ts`). Het is de bovengrens voor elk volume dat de API aanvaardt:
+
+- het volume van een recept (`recept_volume` bij `POST` en `PUT /api/recipes`);
+- het maisch- en spoelwater (`mash_water_l`, `sparge_water_l`), zowel in het volledige recept als bij `PUT /api/recipes/{id}/water`;
+- het volume van een brouwsessie, zodra die endpoints er zijn.
+
+Een grotere waarde geeft `400` met het veld en de grens in de melding, bv. `{"fout": "Ongeldige request body: recept_volume: volume mag maximaal 100 liter zijn"}`. Swagger toont de ingestelde grens. In de code gebruik je altijd `config.maxVolumeLiter`, nooit een vast getal.
+
+Is `MAX_VOLUME_LITER` geen getal groter dan 0 (bv. `0` of `veel`), dan start de back-end niet en meldt hij waarom. De waarde wordt bij het opstarten gelezen: herstart de back-end na een wijziging.
 
 ## Database-migraties
 

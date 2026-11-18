@@ -5,6 +5,7 @@ export type RecipeInput = {
   name: string;
   beer_style: string | null;
   description: string | null;
+  recept_volume: number; // liter
   water: { mash_water_l: number; sparge_water_l: number } | null;
   ingredients: { ingredient_id: number; amount_g: number }[];
   hops: { hop_id: number; amount_g: number; boil_time_min: number }[];
@@ -81,8 +82,8 @@ function inTransactie<T>(werk: () => T): T {
 export function maakRecept(recept: RecipeInput): number {
   return inTransactie(() => {
     const resultaat = db
-      .prepare('INSERT INTO recipes (name, beer_style, description) VALUES (?, ?, ?)')
-      .run(recept.name, recept.beer_style, recept.description);
+      .prepare('INSERT INTO recipes (name, beer_style, description, recept_volume) VALUES (?, ?, ?, ?)')
+      .run(recept.name, recept.beer_style, recept.description, recept.recept_volume);
     const id = Number(resultaat.lastInsertRowid);
     schrijfOnderdelen(id, recept);
     return id;
@@ -99,8 +100,8 @@ export function verwijderRecept(id: number): void {
 export function vervangRecept(id: number, recept: RecipeInput): void {
   inTransactie(() => {
     db.prepare(
-      "UPDATE recipes SET name = ?, beer_style = ?, description = ?, timestamp_edit = datetime('now') WHERE recipe_id = ?",
-    ).run(recept.name, recept.beer_style, recept.description, id);
+      "UPDATE recipes SET name = ?, beer_style = ?, description = ?, recept_volume = ?, timestamp_edit = datetime('now') WHERE recipe_id = ?",
+    ).run(recept.name, recept.beer_style, recept.description, recept.recept_volume, id);
     schrijfOnderdelen(id, recept);
   });
 }

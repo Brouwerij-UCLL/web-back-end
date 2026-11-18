@@ -3,7 +3,7 @@ import { config } from './config.ts';
 import { checkDatabaseConnection } from './database/db.ts';
 import { startMqtt } from './mqtt/client.ts';
 
-// Lokaal startpunt van de back-end: MQTT verbinden en de webserver starten.
+// Lokaal startpunt van de back-end: verbinden met de MQTT-broker (Mosquitto) en de webserver starten.
 startMqtt();
 
 app.listen(config.port, () => {

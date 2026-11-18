@@ -36,6 +36,7 @@ const aantalRecepten = () => (db.prepare('SELECT count(*) AS n FROM recipes').ge
 
 const volledigRecept = {
   name: 'Test Tripel',
+  recept_volume: 20,
   beer_style: 'Belgische Tripel',
   description: 'Recept uit de test',
   water: { mash_water_l: 20, sparge_water_l: 14 },
@@ -81,6 +82,7 @@ test('AC1: PUT vervangt alle onderdelen', async () => {
   const { body: nieuw } = await vraag('POST', '', volledigRecept);
   const { status, body } = await vraag('PUT', `/${nieuw.id}`, {
     name: 'Test Blond',
+    recept_volume: 20,
     ingredients: [{ ingredient_id: 2, amount_g: 4000 }],
     mash_schedule: { steps: [{ temperature_c: 65, duration_min: 60 }] },
   });
@@ -140,6 +142,7 @@ test('transactie: een fout halverwege laat niets achter', () => {
   assert.throws(() =>
     maakRecept({
       name: 'Halverwege mislukt',
+      recept_volume: 20,
       beer_style: null,
       description: null,
       water: { mash_water_l: 10, sparge_water_l: 5 },
@@ -167,6 +170,7 @@ test('AC3: een opgehaald recept kan ongewijzigd teruggestuurd worden met PUT', a
     name: recept.name,
     beer_style: recept.beer_style,
     description: recept.description,
+    recept_volume: recept.recept_volume,
     water: recept.water,
     ingredients: recept.ingredients.map((r: { ingredient_id: number; amount_g: number }) => ({
       ingredient_id: r.ingredient_id,

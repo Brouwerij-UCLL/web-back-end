@@ -1,3 +1,4 @@
+import { config } from '../../config.ts';
 import { getRecept, getRecepten, getReceptIngredients } from '../../database/recepten/queries.ts';
 import {
   maakRecept,
@@ -37,6 +38,7 @@ import {
   RecipeIngredientList,
   RecipeInput,
   RecipeList,
+  RecipesQuery,
   ReceptIdParams,
   Water,
   WaterInput,
@@ -50,10 +52,11 @@ recepten.route({
   method: 'get',
   path: '/',
   summary: 'Lijst van alle recepten',
-  description: 'Alle recepten met hun algemene gegevens, alfabetisch op naam.',
+  description: 'Alle recepten met hun algemene gegevens, alfabetisch op naam. Met `orderBy=desc` in omgekeerde volgorde (Z tot A).',
+  query: RecipesQuery,
   response: RecipeList,
   responseDescription: 'De recepten',
-  handler: () => getRecepten(),
+  handler: ({ query }) => getRecepten(query.orderBy),
 });
 
 recepten.route({
@@ -277,7 +280,7 @@ recepten.route({
   summary: 'Maisch- en spoelwater van een recept opslaan of wijzigen',
   description:
     'Slaat beide hoeveelheden op of vervangt de vorige waarden. De andere receptgegevens blijven ongewijzigd. ' +
-    'Grenzen: mash_water_l groter dan 0, sparge_water_l 0 of meer, elk maximaal 500 liter.',
+    `Grenzen: mash_water_l groter dan 0, sparge_water_l 0 of meer, elk maximaal ${config.maxVolumeLiter} liter (MAX_VOLUME_LITER).`,
   params: ReceptIdParams,
   body: WaterInput,
   response: Water,
