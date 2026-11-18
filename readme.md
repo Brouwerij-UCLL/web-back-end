@@ -49,7 +49,7 @@ migrations/         SQL-migraties (001_..., 002_...)
 src/
   server.ts         lokaal startpunt: MQTT en webserver starten
   app.ts            de Express-app: migraties, middleware en routers (startpunt op Vercel)
-  config.ts         instellingen uit .env (PORT, DATABASE_FILE, MQTT_*, CORS_ORIGINS)
+  config.ts         instellingen uit .env (PORT, DATABASE_FILE, MQTT_*, CORS_ORIGINS, MAX_VOLUME_LITER)
   api/              REST-endpoints
     index.ts        lijst van alle groepen endpoints
     docs.ts         Swagger UI op /api/docs
@@ -163,7 +163,7 @@ Sinds migratie 003 gebruikt de database Engelse tabel- en kolomnamen. De API geb
 
 | Tabel | Inhoud |
 |---|---|
-| `recipes` | naam, bierstijl, beschrijving, aanmaak- en wijzigingstijd |
+| `recipes` | naam, bierstijl, beschrijving, volume in liter (`recept_volume`), aanmaak- en wijzigingstijd |
 | `ingredients`, `hops`, `extra_ingredients` | catalogi die recepten delen (een hop of mout bestaat één keer) |
 | `recipe_ingredients` | vergistbare ingrediënten per recept, hoeveelheid in gram |
 | `hop_additions` | hopgiften per recept: hoeveelheid en kooktijd; dezelfde hop kan meerdere keren |
@@ -200,6 +200,18 @@ Voor de gedeployde front-end zet je op Vercel bv.:
 ```
 CORS_ORIGINS=http://localhost:4200,https://<front-end>.vercel.app
 ```
+
+### Maximale capaciteit van de brouwketel
+
+`MAX_VOLUME_LITER` in `.env` is de capaciteit van de brouwketel in liter, standaard `100` (`src/config.ts`). Het is de bovengrens voor elk volume dat de API aanvaardt:
+
+- het volume van een recept (`recept_volume` bij `POST` en `PUT /api/recipes`);
+- het maisch- en spoelwater (`mash_water_l`, `sparge_water_l`), zowel in het volledige recept als bij `PUT /api/recipes/{id}/water`;
+- het volume van een brouwsessie, zodra die endpoints er zijn.
+
+Een grotere waarde geeft `400` met het veld en de grens in de melding, bv. `{"fout": "Ongeldige request body: recept_volume: volume mag maximaal 100 liter zijn"}`. Swagger toont de ingestelde grens. In de code gebruik je altijd `config.maxVolumeLiter`, nooit een vast getal.
+
+Is `MAX_VOLUME_LITER` geen getal groter dan 0 (bv. `0` of `veel`), dan start de back-end niet en meldt hij waarom. De waarde wordt bij het opstarten gelezen: herstart de back-end na een wijziging.
 
 ## Database-migraties
 
