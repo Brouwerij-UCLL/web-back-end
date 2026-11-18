@@ -8,7 +8,7 @@ const tagOmschrijvingen: Record<Tag, string> = {
   hops: 'Catalogus van hops die recepten gebruiken',
   extras: 'Catalogus van extra ingrediënten (kruiden, fruit, suikers, …) die recepten gebruiken',
   brouwsessies: 'Brouwsessies en hun stappen',
-  installatie: 'De brouwinstallatie: sensoren en actuatoren',
+  installatie: 'De brouwinstallatie: toestellen (ketel, kast) met hun sensoren, actuatoren en online-status',
   health: 'Status van de back-end',
 };
 

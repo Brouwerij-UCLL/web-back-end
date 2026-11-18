@@ -6,6 +6,10 @@ import { after, before, test } from 'node:test';
 // Controleert de API-documentatie tegen de acceptatiecriteria, op een tijdelijke database in het geheugen.
 process.env.DATABASE_FILE = ':memory:';
 const { app } = await import('../../app.ts');
+const { handleMessage } = await import('../../mqtt/handlers.ts');
+
+// Toestellen komen alleen via MQTT binnen; meld het voorbeeldtoestel uit de documentatie aan.
+handleMessage('brouwer/a4cf12b3c8e0/info', JSON.stringify({ type: 'ketel', name: 'Brouwketel 1' }));
 
 type Schema = { example?: unknown; $ref?: string };
 type MediaType = { schema: Schema };
