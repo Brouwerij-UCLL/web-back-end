@@ -1,4 +1,5 @@
 import { normaliseerMac, verwerkActuatorToestand, verwerkFout, verwerkInfo, verwerkMeting, verwerkStatus } from './devices.ts';
+import { verwerkAck } from './opdrachten.ts';
 import { BACKEND_STATUS_ID, parseTopic } from './topics.ts';
 
 // Verwerkt één binnenkomend MQTT-bericht.
@@ -18,4 +19,5 @@ export function handleMessage(topic: string, payload: string): void {
   else if (hoofdtype === 'sensor' && naam) verwerkMeting(mac, naam, payload);
   else if (hoofdtype === 'actuator' && naam) verwerkActuatorToestand(mac, naam, payload);
   else if (hoofdtype === 'fout') verwerkFout(mac, payload);
+  else if (hoofdtype === 'ack') verwerkAck(mac, payload);
 }

@@ -1,6 +1,7 @@
 import mqtt, { type IClientOptions, type MqttClient } from 'mqtt';
 import { config } from '../config.ts';
 import { handleMessage } from './handlers.ts';
+import { setPublisher } from './opdrachten.ts';
 import { BACKEND_STATUS_TOPIC, subscribedTopics } from './topics.ts';
 
 // De back-end volgt dezelfde verbindingsregels als de toestellen: een status die retained is,
@@ -28,6 +29,9 @@ export function startMqtt(): MqttClient {
   mqttClient.on('connect', () => {
     console.log('Successfully connected to MQTT broker');
     mqttClient.publish(BACKEND_STATUS_TOPIC, 'online', statusBericht);
+    setPublisher(async (topic, payload, qos) => {
+      await mqttClient.publishAsync(topic, payload, { qos });
+    });
 
     mqttClient.subscribe(subscribedTopics, (err: Error | null) => {
       if (!err) {
@@ -41,6 +45,8 @@ export function startMqtt(): MqttClient {
   mqttClient.on('message', (topic: string, message: Buffer) => {
     handleMessage(topic, message.toString());
   });
+
+  mqttClient.on('close', () => setPublisher(undefined));
 
   mqttClient.on('error', (err: Error) => {
     console.error('MQTT client error:', err);
