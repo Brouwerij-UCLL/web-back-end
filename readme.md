@@ -147,6 +147,12 @@ De Proxmox-installatie in [Brouwerij-UCLL/brouwapp-deploy](https://github.com/Br
 - Adres voor de toestellen: het IP-adres van de pc of server met Mosquitto, poort 1883.
 - Op Vercel draait geen broker: de toestellen hebben een server nodig die blijft aanstaan.
 
+### Recept naar een toestel
+
+`POST /api/devices/{mac}/recipe` met `{"recipe_id": 1}` stuurt het volledige recept (zoals `GET /api/recipes/{id}`, dus met maischema, hop, water en vergistingsschema) naar dat ene toestel: `brouwer/<mac>/cmd/recept`, QoS 2, als `{"message_id": "…", "data": {…recept…}}`. Het MAC-adres in het pad bepaalt voor wie het recept is, bv. de brouwketel of de vergistingsketel.
+
+Het toestel bevestigt op `brouwer/<mac>/ack` met `{"message_id": "…", "ok": true}`, of `{"message_id": "…", "ok": false, "fout": "…"}`. Het endpoint wacht daarop en antwoordt `200` (geladen), `502` (toestel weigerde), `504` (geen ack binnen 10 s), `409` (toestel offline of `recept` staat niet in zijn `commands`) of `503` (geen verbinding met de broker).
+
 ### Status van de back-end
 
 De back-end volgt dezelfde verbindingsregels als de toestellen. Na het verbinden publiceert hij `brouwer/server/status` = `online` (retained, QoS 1); als last will staat daar `offline`. Bij een gewone stop (Ctrl+C, `systemctl stop/restart`) stuurt hij eerst zelf `offline`. Ketel en kast kunnen op dit topic abonneren om te weten of de back-end er is. Keepalive 30 s, client-id `brouwer-server-<willekeurig>`.
