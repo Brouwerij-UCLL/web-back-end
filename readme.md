@@ -141,7 +141,7 @@ Sinds migratie 003 gebruikt de database Engelse tabel- en kolomnamen. De API geb
 | `recipe_mash_steps`, `recipe_fermentation_steps` | maisch- en vergistingsstappen met temperatuur en duur |
 | `brouwsessies`, `brouwsessie_stappen` | sessiesnapshots en hun uitvoeringsstappen; verwijderen van het recept ontkoppelt de sessie maar bewaart de historie |
 
-`GET /api/recipes` supports `search`, `beer_style`, `sort` (`name`, `created_at`, `updated_at`) and `direction` (`asc`, `desc`). Update and delete recipes using `PUT` and `DELETE /api/recipes/{id}`.
+`GET /api/recipes` supports `search`, `beer_style`, `sort` (`name`, `created_at`, `updated_at`) and `direction` (`asc`, `desc`). Update recipe basics and delete recipes using `PUT` and `DELETE /api/recipes/{id}`. Replace a complete recipe, including all its parts, using `PUT /api/recipes/{id}/full`.
 
 ## Starten
 

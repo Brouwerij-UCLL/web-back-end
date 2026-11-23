@@ -79,7 +79,7 @@ test('AC0: een volledig recept opslaan geeft 201 en het volledige recept', async
 
 test('AC1: PUT vervangt alle onderdelen', async () => {
   const { body: nieuw } = await vraag('POST', '', volledigRecept);
-  const { status, body } = await vraag('PUT', `/${nieuw.id}`, {
+  const { status, body } = await vraag('PUT', `/${nieuw.id}/full`, {
     name: 'Test Blond',
     ingredients: [{ ingredient_id: 2, amount_g: 4000 }],
     mash_schedule: { steps: [{ temperature_c: 65, duration_min: 60 }] },
@@ -198,7 +198,7 @@ test('AC3: een opgehaald recept kan ongewijzigd teruggestuurd worden met PUT', a
       })),
     },
   };
-  const { status, body } = await vraag('PUT', '/2', terug);
+  const { status, body } = await vraag('PUT', '/2/full', terug);
   assert.equal(status, 200);
   // Bij PUT worden de hopgiften opnieuw aangemaakt: hun eigen id verandert, de inhoud niet.
   const zonderVluchtigeVelden = ({ updated_at: _, hops, ...rest }: { updated_at: string; hops: { id: number }[] }) => ({
@@ -210,7 +210,7 @@ test('AC3: een opgehaald recept kan ongewijzigd teruggestuurd worden met PUT', a
 
 test('AC4: PUT op een onbestaand recept geeft 404 en verandert niets', async () => {
   const voor = aantalRecepten();
-  const { status } = await vraag('PUT', '/9999', volledigRecept);
+  const { status } = await vraag('PUT', '/9999/full', volledigRecept);
   assert.equal(status, 404);
   assert.equal(aantalRecepten(), voor);
 });

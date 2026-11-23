@@ -40,7 +40,6 @@ recepten.route({
   responseDescription: 'Het gewijzigde recept',
   errors: { 404: nietGevonden },
   handler: ({ params, body }) => {
-    if (!receptBestaat(params.id)) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
     const recipe = updateRecipeBasics(params.id, body);
     if (!recipe) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
     return recipe;
@@ -238,7 +237,7 @@ recepten.route({
 
 recepten.route({
   method: 'put',
-  path: '/:id',
+  path: '/:id/full',
   summary: 'Volledig recept vervangen',
   description:
     'Vervangt de basisgegevens en alle onderdelen van een bestaand recept (in één transactie). Onderdelen die niet meegestuurd worden, zijn daarna leeg.',

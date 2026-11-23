@@ -123,6 +123,10 @@ test('receptbeheer is in het Nederlands beschreven en gebruikt Engelse API-velde
   assert.deepEqual(Object.keys(bodySchema.properties), ['name', 'beer_style', 'description', 'basis_volume_liter']);
   assert.ok(Object.values(bodySchema.properties).every((property) => property.description));
 
+  const volledigVervangen = spec.paths['/api/recipes/{id}/full']?.put;
+  assert.ok(volledigVervangen);
+  assert.equal(volledigVervangen.summary, 'Volledig recept vervangen');
+
   const verwijderen = spec.paths['/api/recipes/{id}']?.delete;
   assert.ok(verwijderen);
   assert.equal(verwijderen.summary, 'Recept verwijderen');
