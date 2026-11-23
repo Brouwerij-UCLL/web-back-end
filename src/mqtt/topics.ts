@@ -7,6 +7,11 @@ export const subscribedTopics = [
   'brouwer/+/fout',
 ];
 
+// Status van de back-end zelf (retained): "online", of "offline" als last will. Toestellen kunnen erop
+// abonneren om te weten of de back-end er is.
+export const BACKEND_STATUS_ID = 'server';
+export const BACKEND_STATUS_TOPIC = `brouwer/${BACKEND_STATUS_ID}/status`;
+
 export type ParsedTopic = {
   brouwerId: string;
   hoofdtype: string;

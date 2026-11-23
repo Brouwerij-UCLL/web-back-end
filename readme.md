@@ -147,6 +147,10 @@ De Proxmox-installatie in [Brouwerij-UCLL/brouwapp-deploy](https://github.com/Br
 - Adres voor de toestellen: het IP-adres van de pc of server met Mosquitto, poort 1883.
 - Op Vercel draait geen broker: de toestellen hebben een server nodig die blijft aanstaan.
 
+### Status van de back-end
+
+De back-end volgt dezelfde verbindingsregels als de toestellen. Na het verbinden publiceert hij `brouwer/server/status` = `online` (retained, QoS 1); als last will staat daar `offline`. Bij een gewone stop (Ctrl+C, `systemctl stop/restart`) stuurt hij eerst zelf `offline`. Ketel en kast kunnen op dit topic abonneren om te weten of de back-end er is. Keepalive 30 s, client-id `brouwer-server-<willekeurig>`.
+
 ### Toestellen
 
 Elk toestel gebruikt zijn MAC-adres als id: 12 hexadecimale tekens in kleine letters, zonder dubbelpunten, bv. `brouwer/a4cf12b3c8e0/…`.
