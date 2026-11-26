@@ -25,6 +25,12 @@ test('GET geeft de kookstap van een bestaand recept terug', async () => {
   assert.deepEqual(await response.json(), { recipe_id: 2, temperature: 100, duration: 90 });
 });
 
+test('GET van een volledig recept bevat ook de kookstap', async () => {
+  const response = await fetch(`${baseUrl}/2`);
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).boil_time, { temperature: 100, duration: 90 });
+});
+
 test('GET van een niet-bestaand recept geeft 404', async () => {
   const response = await fetch(`${baseUrl}/9999/boil-time`);
   assert.equal(response.status, 404);
@@ -38,4 +44,8 @@ test('GET van een bestaand recept zonder kookstap geeft 404', async () => {
   const response = await fetch(`${baseUrl}/1/boil-time`);
   assert.equal(response.status, 404);
   assert.deepEqual(await response.json(), { fout: 'kookstap voor recept 1 niet gevonden' });
+
+  const fullRecipeResponse = await fetch(`${baseUrl}/1`);
+  assert.equal(fullRecipeResponse.status, 200);
+  assert.equal((await fullRecipeResponse.json()).boil_time, null);
 });

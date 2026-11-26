@@ -40,6 +40,7 @@ const volledigRecept = {
   beer_style: 'Belgische Tripel',
   description: 'Recept uit de test',
   water: { mash_water_l: 20, sparge_water_l: 14 },
+  boil_time: { temperature: 100, duration: 90 },
   ingredients: [
     { ingredient_id: 1, amount_g: 5500 },
     { ingredient_id: 3, amount_g: 800 },
@@ -67,6 +68,7 @@ test('AC0: een volledig recept opslaan geeft 201 en het volledige recept', async
   assert.ok(Number.isInteger(body.id));
   assert.equal(body.name, 'Test Tripel');
   assert.deepEqual(body.water, { mash_water_l: 20, sparge_water_l: 14 });
+  assert.deepEqual(body.boil_time, { temperature: 100, duration: 90 });
   assert.deepEqual(
     body.ingredients.map((r: { ingredient_id: number; amount_g: number }) => [r.ingredient_id, r.amount_g]),
     [[1, 5500], [3, 800]],
@@ -91,11 +93,36 @@ test('AC1: PUT vervangt alle onderdelen', async () => {
   assert.equal(body.name, 'Test Blond');
   assert.equal(body.beer_style, null);
   assert.equal(body.water, null);
+  assert.equal(body.boil_time, null, 'een niet meegestuurde kookstap wordt verwijderd');
   assert.deepEqual(body.ingredients.map((r: { ingredient_id: number }) => r.ingredient_id), [2]);
   assert.deepEqual(body.hops, []);
   assert.deepEqual(body.extras, []);
   assert.equal(body.mash_schedule.steps.length, 1);
   assert.deepEqual(body.fermentation_schedule.steps, []);
+});
+
+test('PUT vervangt de kooktijd uit recipe_boil_time', async () => {
+  const { body: nieuw } = await vraag('POST', '', volledigRecept);
+  const { status, body } = await vraag('PUT', `/${nieuw.id}`, {
+    ...volledigRecept,
+    boil_time: { temperature: 100, duration: 75 },
+  });
+  assert.equal(status, 200);
+  assert.deepEqual(body.boil_time, { temperature: 100, duration: 75 });
+  const savedBoilTime = db
+    .prepare('SELECT temperature, duration FROM recipe_boil_time WHERE recipe_id = ?')
+    .get(nieuw.id) as { temperature: number; duration: number };
+  assert.equal(savedBoilTime.temperature, 100);
+  assert.equal(savedBoilTime.duration, 75);
+});
+
+test('een kooktijd met een andere temperatuur of ongeldige duur wordt geweigerd', async () => {
+  const voor = aantalRecepten();
+  for (const boil_time of [{ temperature: 99, duration: 60 }, { temperature: 100, duration: 0 }]) {
+    const { status } = await vraag('POST', '', { ...volledigRecept, boil_time });
+    assert.equal(status, 400);
+    assert.equal(aantalRecepten(), voor);
+  }
 });
 
 test('AC2: een ongeldig onderdeel geeft 400 met alle fouten, en er wordt niets opgeslagen', async () => {
@@ -146,6 +173,7 @@ test('transactie: een fout halverwege laat niets achter', () => {
       beer_style: null,
       description: null,
       water: { mash_water_l: 10, sparge_water_l: 5 },
+      boil_time: null,
       ingredients: [{ ingredient_id: 1, amount_g: 100 }],
       hops: [{ hop_id: 999, amount_g: 10, boil_time_min: 5 }],
       extras: [],
@@ -172,6 +200,7 @@ test('AC3: een opgehaald recept kan ongewijzigd teruggestuurd worden met PUT', a
     description: recept.description,
     recept_volume: recept.recept_volume,
     water: recept.water,
+    boil_time: recept.boil_time,
     ingredients: recept.ingredients.map((r: { ingredient_id: number; amount_g: number }) => ({
       ingredient_id: r.ingredient_id,
       amount_g: r.amount_g,
