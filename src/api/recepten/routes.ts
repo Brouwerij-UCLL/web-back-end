@@ -11,6 +11,7 @@ import {
 import { getHopAdditions } from '../../database/recepten/hopAdditions.ts';
 import { getExtras } from '../../database/recepten/extras.ts';
 import { getMashSchedule, replaceMashSchedule } from '../../database/recepten/mashSchedule.ts';
+import { getRecipeBoilTime } from '../../database/recepten/boilTime.ts';
 import { getWater, saveWater } from '../../database/recepten/water.ts';
 import { getFermentationSchedule, replaceFermentationSchedule } from '../../database/recepten/fermentationSchedule.ts';
 import {
@@ -31,6 +32,7 @@ import {
   MashSchedule,
   MashScheduleInput,
   Recipe,
+  RecipeBoilTime,
   RecipeExtraList,
   RecipeIngredient,
   RecipeIngredientList,
@@ -73,7 +75,6 @@ recepten.route({
     return recept;
   },
 });
-
 recepten.route({
   method: 'get',
   path: '/:id/ingredients',
@@ -437,5 +438,22 @@ recepten.route({
     if (!ingredient) throw new HttpFout(404, `ingrediënt ${params.ingredientId} zit niet in recept ${params.id}`);
     deleteFermentable(params.id, params.ingredientId);
     return ingredient;
+  },
+});
+
+recepten.route({
+  method: 'get',
+  path: '/:id/boil-time',
+  summary: 'Laatste kookstap van een recept',
+  description: 'Geeft de temperatuur in °C en duur in minuten van de geregistreerde laatste kookstap.',
+  params: ReceptIdParams,
+  response: RecipeBoilTime,
+  responseDescription: 'De temperatuur en duur van de laatste kookstap',
+  errors: { 404: 'Het recept of de kookstap is niet gevonden' },
+  handler: ({ params }) => {
+    if (!receptBestaat(params.id)) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    const kooktijd = getRecipeBoilTime(params.id);
+    if (!kooktijd) throw new HttpFout(404, `kookstap voor recept ${params.id} niet gevonden`);
+    return kooktijd;
   },
 });
