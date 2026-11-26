@@ -134,3 +134,17 @@ export function getSensorUnit(mac: string, sensor: string): string | null {
   const info: Partial<DeviceInfo> = rij?.info ? JSON.parse(rij.info) : {};
   return info.sensors?.find((s) => s.name === sensor)?.unit ?? null;
 }
+
+export type DeviceNaam = { mac: string; origineel: string | null; name: string | null; online: boolean; created_at: string };
+
+// Per toestel de naam uit zijn info-bericht (origineel) en de getoonde naam, oudste toestel eerst.
+export function getDeviceNamen(): DeviceNaam[] {
+  const rijen = db
+    .prepare(`SELECT mac, json_extract(info, '$.name') AS origineel, name, online, created_at FROM devices ORDER BY created_at, rowid`)
+    .all() as (Omit<DeviceNaam, 'online'> & { online: number })[];
+  return rijen.map((rij) => ({ ...rij, online: rij.online === 1 }));
+}
+
+export function setDeviceName(mac: string, name: string): void {
+  db.prepare(`UPDATE devices SET name = ?, updated_at = datetime('now') WHERE mac = ?`).run(name, mac);
+}

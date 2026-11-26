@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 export const ACK_TIMEOUT_MS = 10_000;
 
-export type Publiceer = (topic: string, payload: string, qos: 0 | 1 | 2) => Promise<void>;
+export type Publiceer = (topic: string, payload: string, qos: 0 | 1 | 2, retain?: boolean) => Promise<void>;
 
 export type AckResultaat = { message_id: string; ok: true } | { message_id: string; ok: false; fout: string };
 
@@ -76,4 +76,10 @@ export function verwerkAck(mac: string, payload: string): void {
       ? { message_id: ack.message_id, ok: true }
       : { message_id: ack.message_id, ok: false, fout: ack.fout ?? 'onbekende fout' },
   );
+}
+
+// Wist retained berichten op de broker (een leeg retained bericht). Zonder verbinding gebeurt er niets.
+export async function wisRetained(topics: string[]): Promise<void> {
+  if (!publiceer) return;
+  for (const topic of topics) await publiceer(topic, '', 1, true);
 }

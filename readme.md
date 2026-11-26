@@ -147,6 +147,15 @@ De Proxmox-installatie in [Brouwerij-UCLL/brouwapp-deploy](https://github.com/Br
 - Adres voor de toestellen: het IP-adres van de pc of server met Mosquitto, poort 1883.
 - Op Vercel draait geen broker: de toestellen hebben een server nodig die blijft aanstaan.
 
+### Dubbele toestelnamen
+
+Twee toestellen met dezelfde naam (uit hun `info`) staan nooit naast elkaar in de lijst:
+
+- Is minstens één ervan online, dan worden de **offline** toestellen met die naam opgeruimd: weg uit de database, `device.removed` via `/api/events`, en hun retained `info`, `status` en actuatortoestanden worden gewist op de broker. Meldt zo'n toestel zich later opnieuw aan, dan komt het gewoon terug.
+- Zijn er meerdere online (of allemaal offline), dan krijgt het tweede een cijfer: `Brouwketel 1 2`, `Brouwketel 1 3`, … Het toestel dat online is en het langst gekend, houdt de naam zonder cijfer. Is de naam weer vrij, dan verdwijnt het cijfer.
+
+Een nieuw toestel met een bezette naam krijgt meteen een cijfer; bij een statuswijziging worden de namen ook meteen herverdeeld. Het opruimen gebeurt 5 seconden na een `info`- of `status`-bericht (zodat bij het verbinden eerst alle retained statussen binnen zijn) en daarnaast elke 5 minuten.
+
 ### Recept naar een toestel
 
 `POST /api/devices/{mac}/recipe` met `{"recipe_id": 1}` stuurt het volledige recept (zoals `GET /api/recipes/{id}`, dus met maischema, hop, water en vergistingsschema) naar dat ene toestel: `brouwer/<mac>/cmd/recept`, QoS 2, als `{"message_id": "…", "data": {…recept…}}`. Het MAC-adres in het pad bepaalt voor wie het recept is, bv. de brouwketel of de vergistingsketel.

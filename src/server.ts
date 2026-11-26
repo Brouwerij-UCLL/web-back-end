@@ -2,9 +2,11 @@ import { app } from './app.ts';
 import { config } from './config.ts';
 import { checkDatabaseConnection } from './database/db.ts';
 import { startMqtt, stopMqtt } from './mqtt/client.ts';
+import { startOpruimen, stopOpruimen } from './mqtt/ontdubbelen.ts';
 
 // Lokaal startpunt van de back-end: verbinden met de MQTT-broker (Mosquitto) en de webserver starten.
 const mqttClient = startMqtt();
+startOpruimen(); // elke 5 minuten dubbele toestelnamen nakijken
 
 const server = app.listen(config.port, () => {
   console.log(`online op http://localhost:${config.port}`);
@@ -25,6 +27,7 @@ async function stop(signaal: string): Promise<void> {
   console.log(`${signaal} ontvangen, back-end stopt`);
   const noodstop = setTimeout(() => process.exit(1), 5000);
   noodstop.unref();
+  stopOpruimen();
   try {
     await stopMqtt(mqttClient);
   } catch (error) {
