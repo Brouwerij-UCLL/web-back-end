@@ -16,7 +16,7 @@ type MediaType = { schema: Schema };
 type Operation = {
   tags?: string[];
   summary?: string;
-  parameters?: { name: string; example?: unknown; schema: Schema }[];
+  parameters?: { name: string; in?: string; required?: boolean; example?: unknown; schema: Schema }[];
   requestBody?: { content: Record<string, MediaType> };
   responses: Record<string, { description: string; content?: Record<string, MediaType> }>;
 };
@@ -104,9 +104,15 @@ test('elk endpoint is volledig gedocumenteerd', () => {
 test('"Try it out" met de voorbeeldwaarden geeft het gedocumenteerde antwoord', async () => {
   for (const [pad, methode, operatie] of operaties()) {
     if (methode !== 'get') continue;
-    const url = pad.replace(/\{(\w+)\}/g, (_, naam: string) =>
+    let url = pad.replace(/\{(\w+)\}/g, (_, naam: string) =>
       String(operatie.parameters?.find((parameter) => parameter.name === naam)?.example),
     );
+    const queryParams = (operatie.parameters ?? [])
+      .filter((p) => p.in === 'query' && p.required)
+      .map((p) => `${p.name}=${encodeURIComponent(String(p.example))}`);
+    if (queryParams.length > 0) {
+      url += `?${queryParams.join('&')}`;
+    }
     const antwoord = await fetch(baseUrl + url);
     // Het antwoord wordt in de back-end tegen het schema gecontroleerd; een afwijking zou een 500 geven.
     assert.ok(String(antwoord.status) in operatie.responses, `GET ${url} gaf ${antwoord.status}, wat niet gedocumenteerd is`);

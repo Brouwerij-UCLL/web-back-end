@@ -55,6 +55,7 @@ export type Recipe = RecipeSummary & {
   created_at: string;
   updated_at: string;
   water: { mash_water_l: number; sparge_water_l: number } | null;
+  boil_time: { temperature: number; duration: number } | null;
   ingredients: RecipeIngredient[];
   hops: HopAddition[];
   extras: RecipeExtra[];
@@ -91,6 +92,14 @@ export function getRecept(id: number): Recipe | undefined {
         )
         FROM recipe_water water
         WHERE water.recipe_id = recipes.recipe_id
+      )),
+      'boil_time', json((
+        SELECT json_object(
+          'temperature', boil_time.temperature,
+          'duration', boil_time.duration
+        )
+        FROM recipe_boil_time boil_time
+        WHERE boil_time.recipe_id = recipes.recipe_id
       )),
       'ingredients', json((
         SELECT json_group_array(json_object(

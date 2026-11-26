@@ -19,6 +19,7 @@ const tripel = {
   created_at: '2026-10-14 12:38:49',
   updated_at: '2026-10-14 12:38:49',
   water: { mash_water_l: 20, sparge_water_l: 14 },
+  boil_time: { temperature: 100, duration: 90 },
   ingredients: [
     pilsnerMalt,
     { ingredient_id: 3, name: 'Wheat Malt (Tarwemout)', manufacturer: 'Dingemans', amount_g: 800 },
@@ -151,12 +152,20 @@ export const RecipeExtraList = z
     corianderExtra,
   ] });
 
+const boilTimeFields = {
+  temperature: z.number().meta({ description: 'Temperatuur in °C' }),
+  duration: z.number().int().meta({ description: 'Duur in minuten' }),
+};
+
+const boilTime = z.object(boilTimeFields);
+
 export const Recipe = z
   .object({
     ...summaryFields,
     created_at: z.string().meta({ description: 'Tijdstip in het formaat "JJJJ-MM-DD uu:mm:ss"' }),
     updated_at: z.string().meta({ description: 'Tijdstip in het formaat "JJJJ-MM-DD uu:mm:ss"' }),
     water: z.object({ mash_water_l: z.number(), sparge_water_l: z.number() }).nullable(),
+    boil_time: boilTime.nullable(),
     ingredients: z.array(RecipeIngredient),
     hops: z.array(hopAddition),
     extras: z.array(RecipeExtra),
@@ -273,6 +282,7 @@ const recipeInputExample = {
   description: 'Klassieke krachtige blondine met fruitige esters en een volle, warme afdronk.',
   base_volume_l: 20,
   water: { mash_water_l: 20, sparge_water_l: 14 },
+  boil_time: { temperature: 100, duration: 90 },
   ingredients: [
     { ingredient_id: 1, amount_g: 5500 },
     { ingredient_id: 3, amount_g: 800 },
@@ -316,6 +326,20 @@ export const RecipeInput = z
       .nullable()
       .optional()
       .transform((waarde) => waarde ?? null),
+    boil_time: z
+      .object({
+        temperature: z.literal(100, { error: 'temperature moet 100 °C zijn' }).meta({ description: 'Temperatuur in °C; altijd 100' }),
+        duration: z
+          .number({ error: 'duration ontbreekt of is geen getal' })
+          .int({ error: 'duration moet een geheel aantal minuten zijn' })
+          .min(1, { error: 'duration moet minstens 1 minuut zijn' })
+          .meta({ description: 'Duur in minuten, minstens 1' }),
+      })
+      .strict()
+      .nullable()
+      .optional()
+      .transform((waarde) => waarde ?? null)
+      .meta({ description: 'Laatste kookstap; weglaten of null verwijdert de kookstap' }),
     ingredients: z.array(ingredientInput).default([]),
     hops: z.array(hopInput).default([]),
     extras: z.array(extraInput).default([]),
@@ -421,6 +445,14 @@ export const Water = z
     sparge_water_l: z.number().nullable().meta({ description: 'Spoelwater in liter; null als het nog niet ingesteld is' }),
   })
   .meta({ example: { recipe_id: 2, ...waterExample } });
+
+export const RecipeBoilTime = z
+  .object({
+    recipe_id: z.number().int(),
+    ...boilTimeFields,
+  })
+  .meta({ example: { recipe_id: 2, temperature: 100, duration: 90 } });
+
 // Vergistingsschema: dezelfde veldnamen als fermentation_schedule in GET /api/recipes/{id}.
 // De foutmeldingen noemen de stap (vanaf 1) en het veld.
 

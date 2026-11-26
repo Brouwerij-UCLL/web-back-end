@@ -7,6 +7,7 @@ export type RecipeInput = {
   description: string | null;
   base_volume_l: number; // liter
   water: { mash_water_l: number; sparge_water_l: number } | null;
+  boil_time: { temperature: 100; duration: number } | null;
   ingredients: { ingredient_id: number; amount_g: number }[];
   hops: { hop_id: number; amount_g: number; boil_time_min: number }[];
   extras: {
@@ -31,7 +32,15 @@ export function receptBestaat(id: number): boolean {
 }
 
 function schrijfOnderdelen(receptId: number, recept: RecipeInput): void {
-  for (const tabel of ['recipe_water', 'recipe_ingredients', 'hop_additions', 'recipe_extras', 'recipe_mash_steps', 'recipe_fermentation_steps']) {
+  for (const tabel of [
+    'recipe_water',
+    'recipe_boil_time',
+    'recipe_ingredients',
+    'hop_additions',
+    'recipe_extras',
+    'recipe_mash_steps',
+    'recipe_fermentation_steps',
+  ]) {
     db.prepare(`DELETE FROM ${tabel} WHERE recipe_id = ?`).run(receptId);
   }
 
@@ -40,6 +49,14 @@ function schrijfOnderdelen(receptId: number, recept: RecipeInput): void {
       receptId,
       recept.water.mash_water_l,
       recept.water.sparge_water_l,
+    );
+  }
+
+  if (recept.boil_time) {
+    db.prepare('INSERT INTO recipe_boil_time (recipe_id, temperature, duration) VALUES (?, ?, ?)').run(
+      receptId,
+      recept.boil_time.temperature,
+      recept.boil_time.duration,
     );
   }
 
@@ -90,7 +107,7 @@ export function maakRecept(recept: RecipeInput): number {
   });
 }
 
-// Verwijdert een recept. Wat alleen bij dit recept hoort (water, ingrediëntregels, hopgiften, extra's,
+// Verwijdert een recept. Wat alleen bij dit recept hoort (water, kooktijd, ingrediëntregels, hopgiften, extra's,
 // maisch- en vergistingsstappen) verdwijnt mee via ON DELETE CASCADE; de catalogi blijven ongewijzigd.
 export function verwijderRecept(id: number): void {
   db.prepare('DELETE FROM recipes WHERE recipe_id = ?').run(id);
