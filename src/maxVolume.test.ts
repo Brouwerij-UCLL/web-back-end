@@ -30,13 +30,13 @@ const max = config.maxVolumeLiter;
 const spec = await (await fetch(basis + '/api/docs/openapi.json')).json();
 const resultaat = {
   max,
-  receptOpGrens: await vraag('POST', '/api/recipes', { name: 'Grens', recept_volume: max }),
-  receptBoven: await vraag('POST', '/api/recipes', { name: 'Te groot', recept_volume: max + 1 }),
+  receptOpGrens: await vraag('POST', '/api/recipes', { name: 'Grens', base_volume_l: max }),
+  receptBoven: await vraag('POST', '/api/recipes', { name: 'Te groot', base_volume_l: max + 1 }),
   receptWaterOpGrens: await vraag('POST', '/api/recipes', {
-    name: 'Water op grens', recept_volume: 20, water: { mash_water_l: max, sparge_water_l: max },
+    name: 'Water op grens', base_volume_l: 20, water: { mash_water_l: max, sparge_water_l: max },
   }),
   receptWaterBoven: await vraag('POST', '/api/recipes', {
-    name: 'Water te groot', recept_volume: 20, water: { mash_water_l: max + 1, sparge_water_l: 1 },
+    name: 'Water te groot', base_volume_l: 20, water: { mash_water_l: max + 1, sparge_water_l: 1 },
   }),
   waterOpGrens: await vraag('PUT', '/api/recipes/2/water', { mash_water_l: max, sparge_water_l: max }),
   waterBoven: await vraag('PUT', '/api/recipes/2/water', { mash_water_l: 10, sparge_water_l: max + 1 }),
@@ -82,12 +82,12 @@ function resultaatMet(waarde: string | undefined): Resultaat {
 // Controleert dat alle volumevalidatie (recept en water) de grens max gebruikt.
 function controleerGrens(r: Resultaat, max: number) {
   assert.equal(r.max, max);
-  assert.equal(r.receptOpGrens.status, 201, 'recept_volume op de grens');
+  assert.equal(r.receptOpGrens.status, 201, 'base_volume_l op de grens');
   assert.equal(r.receptWaterOpGrens.status, 201, 'water in het recept op de grens');
   assert.equal(r.waterOpGrens.status, 200, 'PUT /water op de grens');
 
   assert.equal(r.receptBoven.status, 400);
-  assert.match(r.receptBoven.fout!, new RegExp(`recept_volume: volume mag maximaal ${max} liter zijn`));
+  assert.match(r.receptBoven.fout!, new RegExp(`base_volume_l: basisvolume mag maximaal ${max} liter zijn`));
   assert.equal(r.receptWaterBoven.status, 400);
   assert.match(r.receptWaterBoven.fout!, new RegExp(`water\\.mash_water_l: maischwater mag maximaal ${max} liter zijn`));
   assert.equal(r.waterBoven.status, 400);

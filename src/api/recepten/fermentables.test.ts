@@ -51,7 +51,7 @@ type Regel = { ingredient_id: number; name: string; manufacturer: string | null;
 async function nieuwRecept(): Promise<number> {
   const { status, body } = await vraag('POST', '', {
     name: 'Moutstort-test',
-    recept_volume: 20,
+    base_volume_l: 20,
     ingredients: [
       { ingredient_id: 7, amount_g: 200 },
       { ingredient_id: 1, amount_g: 5500 },
@@ -142,7 +142,7 @@ describe('AC1: lijst opvragen', () => {
   });
 
   test('een recept zonder ingrediënten geeft een lege lijst', async () => {
-    const { body } = await vraag('POST', '', { name: 'Leeg recept', recept_volume: 20 });
+    const { body } = await vraag('POST', '', { name: 'Leeg recept', base_volume_l: 20 });
     assert.deepEqual(await lijst(body.id), []);
   });
 
