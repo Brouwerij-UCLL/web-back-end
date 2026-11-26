@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { deleteDevice, getSensorUnit, saveDeviceInfo, saveDeviceStatus, saveReading } from '../database/devices/queries.ts';
+import { deleteDevice, getDevice, getSensorUnit, saveDeviceInfo, saveDeviceStatus, saveReading } from '../database/devices/queries.ts';
 import { gebeurtenissen } from '../events.ts';
+import { ontdubbelNamen, planOpruimen } from './ontdubbelen.ts';
 
 // Verwerkt de aanmelding (info) en de online/offline-status van toestellen.
 
@@ -40,9 +41,12 @@ export function verwerkInfo(mac: string, payload: string): void {
     console.warn(`[TOESTEL] ${mac}: ongeldige info, genegeerd: ${info.error.issues.map((i) => i.message).join('; ')}`);
     return;
   }
-  const device = saveDeviceInfo(mac, info.data);
+  saveDeviceInfo(mac, info.data);
+  ontdubbelNamen({ opruimen: false }); // een nieuw toestel met een bezette naam krijgt meteen een cijfer
+  const device = getDevice(mac)!;
   console.log(`[TOESTEL] ${mac} aangemeld als ${device.type}${device.name ? ` (${device.name})` : ''}`);
   gebeurtenissen.emit('device.updated', device);
+  planOpruimen();
 }
 
 // brouwer/<mac>/status: "online" of "offline" (ook de last will van het toestel).
@@ -55,6 +59,8 @@ export function verwerkStatus(mac: string, payload: string): void {
   const device = saveDeviceStatus(mac, status === 'online');
   console.log(`[TOESTEL] ${mac} is ${status}`);
   gebeurtenissen.emit('device.status', { mac, online: device.online, last_seen: device.last_seen! });
+  ontdubbelNamen({ opruimen: false }); // wie online is, houdt de naam zonder cijfer
+  planOpruimen();
 }
 
 // brouwer/<mac>/sensor/<naam>: een getal, met een punt als decimaalteken (bv. "66.8").

@@ -29,8 +29,8 @@ export function startMqtt(): MqttClient {
   mqttClient.on('connect', () => {
     console.log('Successfully connected to MQTT broker');
     mqttClient.publish(BACKEND_STATUS_TOPIC, 'online', statusBericht);
-    setPublisher(async (topic, payload, qos) => {
-      await mqttClient.publishAsync(topic, payload, { qos });
+    setPublisher(async (topic, payload, qos, retain = false) => {
+      await mqttClient.publishAsync(topic, payload, { qos, retain });
     });
 
     mqttClient.subscribe(subscribedTopics, (err: Error | null) => {
