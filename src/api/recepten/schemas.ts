@@ -9,7 +9,7 @@ const tripelSummary = {
   name: 'Gouden Tripel',
   beer_style: 'Belgische Tripel',
   description: 'Klassieke krachtige blondine met fruitige esters en een volle, warme afdronk.',
-  recept_volume: 20,
+  base_volume_l: 20,
 };
 
 const pilsnerMalt = { ingredient_id: 1, name: 'Pilsner Malt', manufacturer: 'Dingemans', amount_g: 5500 };
@@ -85,7 +85,7 @@ const summaryFields = {
   name: z.string(),
   beer_style: z.string().nullable(),
   description: z.string().nullable(),
-  recept_volume: z.number().meta({ description: 'Volume van het recept in liter' }),
+  base_volume_l: z.number().meta({ description: 'Basisvolume van het recept in liter' }),
 };
 
 export const RecipeSummary = z.object(summaryFields).meta({ example: tripelSummary });
@@ -271,7 +271,7 @@ const recipeInputExample = {
   name: 'Gouden Tripel',
   beer_style: 'Belgische Tripel',
   description: 'Klassieke krachtige blondine met fruitige esters en een volle, warme afdronk.',
-  recept_volume: 20,
+  base_volume_l: 20,
   water: { mash_water_l: 20, sparge_water_l: 14 },
   ingredients: [
     { ingredient_id: 1, amount_g: 5500 },
@@ -296,11 +296,11 @@ export const RecipeInput = z
     name: z.string().trim().min(1, 'naam is verplicht').max(100, 'naam mag maximaal 100 tekens lang zijn'),
     beer_style: optionalText(50, 'bierstijl'),
     description: optionalText(1000, 'beschrijving'),
-    recept_volume: z
-      .number({ error: 'volume is verplicht en moet een getal zijn' })
-      .positive('volume moet groter zijn dan 0 liter')
-      .max(maxLiter, `volume mag maximaal ${maxLiter} liter zijn`)
-      .meta({ description: `Volume van het recept in liter, groter dan 0 en hoogstens ${maxLiter}` }),
+    base_volume_l: z
+      .number({ error: 'basisvolume is verplicht en moet een getal zijn' })
+      .positive('basisvolume moet groter zijn dan 0 liter')
+      .max(maxLiter, `basisvolume mag maximaal ${maxLiter} liter zijn`)
+      .meta({ description: `Basisvolume van het recept in liter, groter dan 0 en hoogstens ${maxLiter} (MAX_VOLUME_LITER)` }),
     water: z
       .object({
         mash_water_l: z
@@ -345,7 +345,7 @@ const mashScheduleExample = {
   steps: mashScheduleInputExample.steps.map((step, i) => ({ step_nr: i + 1, ...step })),
 };
 
-// Foutmelding voor een veld van een stap, bv. "stap 2: temperature moet tussen 20 en 80 °C liggen (gekregen: 90)".
+// Foutmelding voor een veld van een stap, bv. "stap 2: temperature moet tussen 20 en 100 °C liggen (gekregen: 105)".
 function stepError(text: string) {
   return (issue: { path?: PropertyKey[]; input?: unknown }) => {
     const index = issue.path?.find((part) => typeof part === 'number');
@@ -472,3 +472,16 @@ export const FermentationSchedule = z
     ),
   })
   .meta({ example: fermentationScheduleExample });
+
+// ----- Vergistbare ingrediënten (moutstort) van een recept -----
+// Een ingrediënt komt uit de catalogus (ingredient_id), de hoeveelheid is in gram: dezelfde regels als
+// ingredients in PUT /api/recipes. Antwoorden hebben hetzelfde formaat als GET /api/recipes/{id}/ingredients.
+
+export const FermentableParams = z
+  .object({
+    id: z.coerce.number().int().positive().meta({ description: 'Id van het recept', example: 2 }),
+    ingredientId: z.coerce.number().int().positive().meta({ description: 'Id van het ingrediënt in de catalogus', example: 1 }),
+  })
+  .meta({ example: { id: 2, ingredientId: 1 } });
+
+export const FermentableInput = ingredientInput.meta({ example: { ingredient_id: 1, amount_g: 5500 } });

@@ -1,3 +1,4 @@
+import { devices } from './devices/routes.ts';
 import { extras } from './extras/routes.ts';
 import { health } from './health.ts';
 import { hops } from './hops/routes.ts';

@@ -7,7 +7,7 @@ export type RecipeSummary = {
   name: string;
   beer_style: string | null;
   description: string | null;
-  recept_volume: number; // liter
+  base_volume_l: number; // liter
 };
 
 export type RecipeIngredient = {
@@ -68,7 +68,7 @@ export function getRecepten(orderBy: 'asc' | 'desc' = 'asc'): RecipeSummary[] {
   const richting = orderBy === 'desc' ? 'DESC' : 'ASC';
   return db
     .prepare(`
-      SELECT recipe_id AS id, name, beer_style, description, recept_volume
+      SELECT recipe_id AS id, name, beer_style, description, base_volume_l
       FROM recipes
       ORDER BY name COLLATE NOCASE ${richting}`)
     .all() as RecipeSummary[];
@@ -81,7 +81,7 @@ export function getRecept(id: number): Recipe | undefined {
       'name', recipes.name,
       'beer_style', recipes.beer_style,
       'description', recipes.description,
-      'recept_volume', recipes.recept_volume,
+      'base_volume_l', recipes.base_volume_l,
       'created_at', recipes.timestamp_create,
       'updated_at', recipes.timestamp_edit,
       'water', json((

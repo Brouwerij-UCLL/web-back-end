@@ -147,6 +147,71 @@ De Proxmox-installatie in [Brouwerij-UCLL/brouwapp-deploy](https://github.com/Br
 - Adres voor de toestellen: het IP-adres van de pc of server met Mosquitto, poort 1883.
 - Op Vercel draait geen broker: de toestellen hebben een server nodig die blijft aanstaan.
 
+### Dubbele toestelnamen
+
+Twee toestellen met dezelfde naam (uit hun `info`) staan nooit naast elkaar in de lijst:
+
+- Is minstens één ervan online, dan worden de **offline** toestellen met die naam opgeruimd: weg uit de database, `device.removed` via `/api/events`, en hun retained `info`, `status` en actuatortoestanden worden gewist op de broker. Meldt zo'n toestel zich later opnieuw aan, dan komt het gewoon terug.
+- Zijn er meerdere online (of allemaal offline), dan krijgt het tweede een cijfer: `Brouwketel 1 2`, `Brouwketel 1 3`, … Het toestel dat online is en het langst gekend, houdt de naam zonder cijfer. Is de naam weer vrij, dan verdwijnt het cijfer.
+
+Een nieuw toestel met een bezette naam krijgt meteen een cijfer; bij een statuswijziging worden de namen ook meteen herverdeeld. Het opruimen gebeurt 5 seconden na een `info`- of `status`-bericht (zodat bij het verbinden eerst alle retained statussen binnen zijn) en daarnaast elke 5 minuten.
+
+### Recept naar een toestel
+
+`POST /api/devices/{mac}/recipe` met `{"recipe_id": 1}` stuurt het volledige recept (zoals `GET /api/recipes/{id}`, dus met maischema, hop, water en vergistingsschema) naar dat ene toestel: `brouwer/<mac>/cmd/recept`, QoS 2, als `{"message_id": "…", "data": {…recept…}}`. Het MAC-adres in het pad bepaalt voor wie het recept is, bv. de brouwketel of de vergistingsketel.
+
+Het toestel bevestigt op `brouwer/<mac>/ack` met `{"message_id": "…", "ok": true}`, of `{"message_id": "…", "ok": false, "fout": "…"}`. Het endpoint wacht daarop en antwoordt `200` (geladen), `502` (toestel weigerde), `504` (geen ack binnen 10 s), `409` (toestel offline of `recept` staat niet in zijn `commands`) of `503` (geen verbinding met de broker).
+
+### Status van de back-end
+
+De back-end volgt dezelfde verbindingsregels als de toestellen. Na het verbinden publiceert hij `brouwer/server/status` = `online` (retained, QoS 1); als last will staat daar `offline`. Bij een gewone stop (Ctrl+C, `systemctl stop/restart`) stuurt hij eerst zelf `offline`. Ketel en kast kunnen op dit topic abonneren om te weten of de back-end er is. Keepalive 30 s, client-id `brouwer-server-<willekeurig>`.
+
+### Toestellen
+
+Elk toestel gebruikt zijn MAC-adres als id: 12 hexadecimale tekens in kleine letters, zonder dubbelpunten, bv. `brouwer/a4cf12b3c8e0/…`.
+
+- Bij het verbinden publiceert een toestel `brouwer/<mac>/info` (retained, JSON met `type`, `name`, `firmware`, `sensors`, `actuators` en `commands`) en `brouwer/<mac>/status` = `online` (retained). Als last will stelt het `brouwer/<mac>/status` = `offline` in (retained).
+- De back-end bewaart elk toestel in de tabel `devices`; `GET /api/devices` en `GET /api/devices/{mac}` tonen ze met hun online-status.
+- Een leeg retained bericht op `brouwer/<mac>/info` haalt een toestel definitief weg.
+- Metingen komen binnen op `brouwer/<mac>/sensor/<naam>` (een getal met een punt, bv. `66.8`) en de toestand van een actuator op `brouwer/<mac>/actuator/<naam>/state` (bv. `on`, `off` of `40`). De back-end houdt per sensor en actuator alleen de laatste waarde bij (tabel `device_readings`); het toestel toont die als `value`/`state` met `updated_at`. De historiek per brouwsessie volgt nog (SCRUM-79).
+- Foutmeldingen van een toestel komen op `brouwer/<mac>/fout`, als JSON `{"code", "message"}` of als platte tekst. Ze worden gelogd en live doorgestuurd, niet bewaard.
+- Ongeldige berichten (geen MAC-adres, geen JSON, geen `type`, een meting die geen getal is) worden gelogd en genegeerd.
+
+### Live updates (Server-Sent Events)
+
+`GET /api/events` is een Server-Sent Events-stroom voor de front-end. Bij het verbinden komt eerst een `snapshot` met alle toestellen, daarna elke wijziging:
+
+| Event | Data |
+|---|---|
+| `snapshot` | `{"devices": [...]}`, zoals `GET /api/devices` |
+| `device.status` | `{"mac", "online", "last_seen"}` |
+| `device.updated` | het volledige toestel, zoals `GET /api/devices/{mac}` |
+| `device.removed` | `{"mac"}` |
+| `meting` | `{"mac", "sensor", "value", "unit", "at"}` |
+| `actuator.state` | `{"mac", "actuator", "state", "at"}` |
+| `fout` | `{"mac", "code", "message", "at"}` |
+
+Valt de verbinding weg, dan verbindt de browser na 3 s vanzelf opnieuw en krijgt hij een nieuwe snapshot. In Angular:
+
+```ts
+const bron = new EventSource(`${API_BASE_URL}/events`);
+bron.addEventListener('snapshot', (e) => this.devices.set(JSON.parse(e.data).devices));
+bron.addEventListener('device.status', (e) => {
+  const { mac, online, last_seen } = JSON.parse(e.data);
+  this.devices.update((lijst) => lijst.map((d) => (d.mac === mac ? { ...d, online, last_seen } : d)));
+});
+bron.addEventListener('meting', (e) => {
+  const { mac, sensor, value, at } = JSON.parse(e.data);
+  this.devices.update((lijst) =>
+    lijst.map((d) =>
+      d.mac === mac ? { ...d, sensors: d.sensors.map((s) => (s.name === sensor ? { ...s, value, updated_at: at } : s)) } : d,
+    ),
+  );
+});
+```
+
+Op Vercel werkt dit niet: een serverless functie houdt geen verbinding open. De live updates hebben de back-end op een server nodig die blijft aanstaan.
+
 ## Database (SQLite)
 
 De back-end gebruikt SQLite via de in Node ingebouwde module `node:sqlite`. Je hoeft niets apart te installeren of te starten; `npm start` en `npm run dev` openen de database automatisch.

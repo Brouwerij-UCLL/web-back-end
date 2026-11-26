@@ -7,7 +7,7 @@ export type Tag = 'recipes' | 'ingredients' | 'hops' | 'extras' | 'brouwsessies'
 type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
 // Statuscodes waarvoor een endpoint een fout in het formaat {"fout": "..."} kan teruggeven.
-export type FoutStatus = 400 | 401 | 403 | 404 | 409 | 503;
+export type FoutStatus = 400 | 401 | 403 | 404 | 409 | 502 | 503 | 504;
 
 // Gooi dit in een handler om een fout met statuscode terug te sturen.
 export class HttpFout extends Error {

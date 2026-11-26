@@ -1,12 +1,14 @@
 import { app } from './app.ts';
 import { config } from './config.ts';
 import { checkDatabaseConnection } from './database/db.ts';
-import { startMqtt } from './mqtt/client.ts';
+import { startMqtt, stopMqtt } from './mqtt/client.ts';
+import { startOpruimen, stopOpruimen } from './mqtt/ontdubbelen.ts';
 
 // Lokaal startpunt van de back-end: verbinden met de MQTT-broker (Mosquitto) en de webserver starten.
-startMqtt();
+const mqttClient = startMqtt();
+startOpruimen(); // elke 5 minuten dubbele toestelnamen nakijken
 
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
   console.log(`online op http://localhost:${config.port}`);
   try {
     checkDatabaseConnection();
@@ -15,3 +17,25 @@ app.listen(config.port, () => {
     console.error('geen verbinding met database:', (error as Error).message);
   }
 });
+
+// Bij stoppen (Ctrl+C, systemctl stop/restart): eerst "offline" melden op MQTT, dan afsluiten.
+// Open live-verbindingen (SSE) worden gesloten; de browser verbindt vanzelf opnieuw.
+let stoppen = false;
+async function stop(signaal: string): Promise<void> {
+  if (stoppen) return;
+  stoppen = true;
+  console.log(`${signaal} ontvangen, back-end stopt`);
+  const noodstop = setTimeout(() => process.exit(1), 5000);
+  noodstop.unref();
+  stopOpruimen();
+  try {
+    await stopMqtt(mqttClient);
+  } catch (error) {
+    console.error('MQTT niet netjes gesloten:', (error as Error).message);
+  }
+  server.closeAllConnections();
+  server.close(() => process.exit(0));
+}
+
+process.on('SIGINT', () => void stop('SIGINT'));
+process.on('SIGTERM', () => void stop('SIGTERM'));

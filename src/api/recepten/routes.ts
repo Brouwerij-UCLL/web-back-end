@@ -13,8 +13,18 @@ import { getExtras } from '../../database/recepten/extras.ts';
 import { getMashSchedule, replaceMashSchedule } from '../../database/recepten/mashSchedule.ts';
 import { getWater, saveWater } from '../../database/recepten/water.ts';
 import { getFermentationSchedule, replaceFermentationSchedule } from '../../database/recepten/fermentationSchedule.ts';
+import {
+  addFermentable,
+  deleteFermentable,
+  getFermentable,
+  getFermentables,
+  updateFermentable,
+  type FermentableResult,
+} from '../../database/recepten/fermentables.ts';
 import { createRoutes, HttpFout } from '../openapi/route.ts';
 import {
+  FermentableInput,
+  FermentableParams,
   FermentationSchedule,
   FermentationScheduleInput,
   HopAdditionList,
@@ -22,6 +32,7 @@ import {
   MashScheduleInput,
   Recipe,
   RecipeExtraList,
+  RecipeIngredient,
   RecipeIngredientList,
   RecipeInput,
   RecipeList,
@@ -216,7 +227,7 @@ recepten.route({
   description:
     'Vervangt alle maischstappen in één keer. De stappen worden genummerd in de volgorde van de lijst. ' +
     'Is één waarde ongeldig, dan wordt er niets opgeslagen en blijft het vorige schema staan. ' +
-    'Grenzen: temperature 20–80 °C, duration 1–240 minuten.',
+    'Grenzen: temperature 20–100 °C, duration 1–240 minuten.',
   params: ReceptIdParams,
   body: MashScheduleInput,
   response: MashSchedule,
@@ -297,5 +308,110 @@ recepten.route({
     const schedule = replaceFermentationSchedule(params.id, body);
     if (!schedule) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
     return schedule;
+  },
+});
+
+// ----- Vergistbare ingrediënten (moutstort) van een recept -----
+
+const ingredientNietGevonden = 'Het recept bestaat niet, of het ingrediënt zit niet in dit recept';
+const alInRecept = 'Het ingrediënt zit al in dit recept';
+
+// Zet het resultaat van toevoegen of wijzigen om naar het ingrediënt of de passende fout.
+function fermentableOfFout(resultaat: FermentableResult, recipeId: number, body: { ingredient_id: number }, ingredientId?: number) {
+  if (resultaat.ok) return resultaat.fermentable;
+  switch (resultaat.reason) {
+    case 'recipe_not_found':
+      throw new HttpFout(404, `recept ${recipeId} niet gevonden`);
+    case 'fermentable_not_found':
+      throw new HttpFout(404, `ingrediënt ${ingredientId} zit niet in recept ${recipeId}`);
+    case 'ingredient_not_in_catalog':
+      throw new HttpFout(400, `Ongeldige request body: ingrediënt ${body.ingredient_id} bestaat niet`);
+    case 'already_in_recipe':
+      throw new HttpFout(409, `ingrediënt ${body.ingredient_id} zit al in recept ${recipeId}`);
+  }
+}
+
+recepten.route({
+  method: 'get',
+  path: '/:id/fermentables',
+  summary: 'Vergistbare ingrediënten van een recept',
+  description:
+    'De moutstort van het recept in de volgorde waarin de ingrediënten zijn toegevoegd. Zelfde formaat als ' +
+    'GET /api/recipes/{id}/ingredients, dat op grootste hoeveelheid sorteert.',
+  params: ReceptIdParams,
+  response: RecipeIngredientList,
+  responseDescription: 'De ingrediënten; een lege lijst als het recept er geen heeft',
+  errors: { 404: nietGevonden },
+  handler: ({ params }) => {
+    const lijst = getFermentables(params.id);
+    if (!lijst) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    return lijst;
+  },
+});
+
+recepten.route({
+  method: 'get',
+  path: '/:id/fermentables/:ingredientId',
+  summary: 'Eén vergistbaar ingrediënt van een recept',
+  params: FermentableParams,
+  response: RecipeIngredient,
+  responseDescription: 'Het ingrediënt',
+  errors: { 404: ingredientNietGevonden },
+  handler: ({ params }) => {
+    if (!receptBestaat(params.id)) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    const ingredient = getFermentable(params.id, params.ingredientId);
+    if (!ingredient) throw new HttpFout(404, `ingrediënt ${params.ingredientId} zit niet in recept ${params.id}`);
+    return ingredient;
+  },
+});
+
+recepten.route({
+  method: 'post',
+  path: '/:id/fermentables',
+  summary: 'Vergistbaar ingrediënt aan een recept toevoegen',
+  description:
+    'Voegt een ingrediënt uit de catalogus (ingredient_id) met een hoeveelheid in gram toe aan de moutstort. ' +
+    'Een nieuw ingrediënt maak je eerst aan met POST /api/ingredients.',
+  params: ReceptIdParams,
+  body: FermentableInput,
+  status: 201,
+  response: RecipeIngredient,
+  responseDescription: 'Het toegevoegde ingrediënt',
+  errors: { 404: nietGevonden, 409: alInRecept },
+  handler: ({ params, body }) => fermentableOfFout(addFermentable(params.id, body), params.id, body),
+});
+
+recepten.route({
+  method: 'put',
+  path: '/:id/fermentables/:ingredientId',
+  summary: 'Vergistbaar ingrediënt van een recept wijzigen',
+  description:
+    'Slaat de nieuwe hoeveelheid op. Met een ander ingredient_id uit de catalogus wordt het ingrediënt vervangen, op ' +
+    'dezelfde plaats in de lijst. De andere ingrediënten blijven ongewijzigd.',
+  params: FermentableParams,
+  body: FermentableInput,
+  response: RecipeIngredient,
+  responseDescription: 'Het gewijzigde ingrediënt',
+  errors: { 404: ingredientNietGevonden, 409: alInRecept },
+  handler: ({ params, body }) =>
+    fermentableOfFout(updateFermentable(params.id, params.ingredientId, body), params.id, body, params.ingredientId),
+});
+
+recepten.route({
+  method: 'delete',
+  path: '/:id/fermentables/:ingredientId',
+  summary: 'Vergistbaar ingrediënt uit een recept verwijderen',
+  description: 'Haalt het ingrediënt uit de moutstort van dit recept. Het ingrediënt blijft in de catalogus.',
+  params: FermentableParams,
+  status: 204,
+  response: RecipeIngredient,
+  responseDescription: 'Het ingrediënt is uit het recept verwijderd',
+  errors: { 404: ingredientNietGevonden },
+  handler: ({ params }) => {
+    if (!receptBestaat(params.id)) throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    const ingredient = getFermentable(params.id, params.ingredientId);
+    if (!ingredient) throw new HttpFout(404, `ingrediënt ${params.ingredientId} zit niet in recept ${params.id}`);
+    deleteFermentable(params.id, params.ingredientId);
+    return ingredient;
   },
 });
