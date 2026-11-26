@@ -53,4 +53,18 @@ export const Device = z
   })
   .meta({ example: ketel });
 
+export const SendRecipeInput = z
+  .object({ recipe_id: z.number().int().positive().meta({ description: 'Id van het recept dat het toestel moet laden' }) })
+  .strict()
+  .meta({ example: { recipe_id: 1 } });
+
+export const SendRecipeResult = z
+  .object({
+    mac: z.string(),
+    recipe_id: z.number().int(),
+    message_id: z.string().meta({ description: 'Id van de opdracht; het toestel bevestigde met dezelfde message_id' }),
+    ok: z.literal(true),
+  })
+  .meta({ example: { mac: 'a4cf12b3c8e0', recipe_id: 1, message_id: 'b41d07aa', ok: true } });
+
 export const DeviceList = z.array(Device).meta({ example: [ketel] });

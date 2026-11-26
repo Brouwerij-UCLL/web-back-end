@@ -5,6 +5,7 @@ export const subscribedTopics = [
   'brouwer/+/actuator/+/state',
   'brouwer/+/status',
   'brouwer/+/fout',
+  'brouwer/+/ack',
 ];
 
 // Status van de back-end zelf (retained): "online", of "offline" als last will. Toestellen kunnen erop
