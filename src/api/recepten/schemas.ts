@@ -421,6 +421,15 @@ export const Water = z
     sparge_water_l: z.number().nullable().meta({ description: 'Spoelwater in liter; null als het nog niet ingesteld is' }),
   })
   .meta({ example: { recipe_id: 2, ...waterExample } });
+
+export const RecipeBoilTime = z
+  .object({
+    recipe_id: z.number().int(),
+    temperature: z.number().meta({ description: 'Temperatuur in °C' }),
+    duration: z.number().int().meta({ description: 'Duur in minuten' }),
+  })
+  .meta({ example: { recipe_id: 2, temperature: 100, duration: 90 } });
+
 // Vergistingsschema: dezelfde veldnamen als fermentation_schedule in GET /api/recipes/{id}.
 // De foutmeldingen noemen de stap (vanaf 1) en het veld.
 
