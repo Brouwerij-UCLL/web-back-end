@@ -41,6 +41,8 @@ import {
   Water,
   WaterInput,
 } from './schemas.ts';
+import { scaleRecipe } from '../../database/recepten/scale.ts';
+import { ScaledRecipeQuery, ScaledRecipeResponse } from '../../database/recepten/schemas.ts';
 
 export const recepten = createRoutes('/api/recipes', 'recipes');
 
@@ -100,6 +102,28 @@ recepten.route({
     return recept;
   },
 });
+
+recepten.route({
+  method: 'get',
+  path: '/:id/scaled',
+  summary: 'Geschaald recept opvragen',
+  params: ReceptIdParams,
+  query: ScaledRecipeQuery,
+  response: ScaledRecipeResponse,
+  responseDescription: 'Het recept met geschaalde hoeveelheden voor het opgegeven volume',
+  errors: {
+    400: 'volume moet groter zijn dan 0',
+    404: 'Er bestaat geen recept met dit id',
+  },
+  handler: ({ params, query }) => {
+    const recipe = getRecept(params.id);
+    if (!recipe) {
+      throw new HttpFout(404, `recept ${params.id} niet gevonden`);
+    }
+
+    return scaleRecipe(recipe, query.volume);
+  },
+  });
 
 // ----- Hopgiften van een recept (SCRUM-52) -----
 
