@@ -103,7 +103,7 @@ test('AC2: een ongeldig onderdeel geeft 400 met alle fouten, en er wordt niets o
   const { status, body } = await vraag('POST', '', {
     ...volledigRecept,
     name: '',
-    mash_schedule: { steps: [{ temperature_c: 62, duration_min: 40 }, { temperature_c: 95, duration_min: 20 }] },
+    mash_schedule: { steps: [{ temperature_c: 62, duration_min: 40 }, { temperature_c: 121, duration_min: 20 }] },
     extras: [{ extra_ingredient_id: 2, amount: 500, add_moment: 'koken' }],
   });
   assert.equal(status, 400);

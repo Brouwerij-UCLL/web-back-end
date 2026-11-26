@@ -245,7 +245,7 @@ const extraInput = z
 
 const mashStepInput = z
   .object({
-    temperature_c: z.number().min(20, 'temperatuur moet tussen 20 en 80 °C liggen').max(120, 'temperatuur moet tussen 20 en 80 °C liggen'),
+    temperature_c: z.number().min(20, 'temperatuur moet tussen 20 en 120 °C liggen').max(120, 'temperatuur moet tussen 20 en 120 °C liggen'),
     duration_min: z.number().int().min(1, 'duur moet tussen 1 en 240 minuten liggen').max(240, 'duur moet tussen 1 en 240 minuten liggen'),
   })
   .strict();
@@ -361,9 +361,9 @@ function received(input: unknown): string {
 const MashStepInput = z.object({
   temperature: z
     .number({ error: stepError('temperature ontbreekt of is geen getal') })
-    .min(20, { error: stepError('temperature moet tussen 20 en 80 °C liggen') })
-    .max(120, { error: stepError('temperature moet tussen 20 en 80 °C liggen') })
-    .meta({ description: 'Temperatuur in °C, van 20 tot en met 80' }),
+    .min(20, { error: stepError('temperature moet tussen 20 en 120 °C liggen') })
+    .max(120, { error: stepError('temperature moet tussen 20 en 120 °C liggen') })
+    .meta({ description: 'Temperatuur in °C, van 20 tot en met 120' }),
   duration: z
     .number({ error: stepError('duration ontbreekt of is geen getal') })
     .int({ error: stepError('duration moet een geheel aantal minuten zijn') })
